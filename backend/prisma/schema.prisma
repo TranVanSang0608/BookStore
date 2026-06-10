@@ -1,0 +1,278 @@
+// =============================================================
+// Schema CORE — 12 bảng (theo THIET-KE.md mục 5)
+// 5 bảng NICE (Wishlist, Voucher, VoucherUsage, Review, RefreshToken)
+// sẽ thêm bằng migration mới khi qua checkpoint Phase 5.
+//
+// Quy ước: field snake_case (trùng tên cột DB, khỏi cần @map),
+// tiền tệ dùng Int vì VND không có số lẻ (30000 = 30.000đ).
+// =============================================================
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+// Prisma 7: connection URL không khai báo ở đây nữa mà nằm trong prisma.config.ts
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  user
+  admin
+}
+
+// 5 trạng thái đơn hàng: Pending → Confirmed → Shipping → Delivered → Cancelled
+enum OrderStatus {
+  Pending
+  Confirmed
+  Shipping
+  Delivered
+  Cancelled
+}
+
+enum PaymentGateway {
+  cod
+  vnpay
+}
+
+enum PaymentStatus {
+  Pending
+  Paid
+  Failed
+  Cancelled
+}
+
+// ---------- Địa giới hành chính VN (tự host — D32) ----------
+// Dữ liệu đóng băng từ provinces.open-api.vn v2 (34 tỉnh, 2 cấp Tỉnh → Phường/Xã,
+// chuẩn sau sáp nhập 2025), seed 1 lần từ prisma/data/vn-locations.json.
+// Lý do tự host thay vì FE gọi API ngoài: demo không phụ thuộc uptime bên thứ ba,
+// và code trong Address/ShippingZone luôn khớp với danh sách dropdown.
+
+model Province {
+  code String @id // mã tỉnh từ API (vd "01" Hà Nội, "79" TP.HCM)
+  name String
+
+  wards Ward[]
+}
+
+model Ward {
+  code          String   @id
+  name          String
+  province_code String
+  province      Province @relation(fields: [province_code], references: [code])
+
+  @@index([province_code]) // dropdown checkout query "phường/xã theo tỉnh" qua cột này
+}
+
+// ---------- User & Address ----------
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password_hash String? // nullable: sau này user đăng nhập Google OAuth không có password
+  name          String
+  phone         String?
+  role          Role     @default(user)
+  created_at    DateTime @default(now())
+
+  addresses Address[]
+  cart      Cart?
+  orders    Order[]
+}
+
+model Address {
+  id      Int  @id @default(autoincrement())
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  recipient_name String
+  phone          String
+
+  // Địa chỉ 2 cấp Tỉnh/Phường-Xã (chuẩn sau sáp nhập 2025 — xem D32):
+  // lưu cả code (để tính ship theo zone) lẫn name (để hiển thị)
+  province_code String
+  ward_code     String
+  province_name String
+  ward_name     String
+  street_detail String
+
+  is_default Boolean @default(false)
+
+  @@index([user_id])
+}
+
+// ---------- Catalog: Author, Category, Book ----------
+
+model Author {
+  id        Int     @id @default(autoincrement())
+  name      String
+  bio       String?
+  photo_url String?
+
+  books Book[]
+}
+
+model Category {
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique // dùng trên URL: /books?category=van-hoc
+  description String?
+
+  books BookCategory[]
+}
+
+model Book {
+  id              Int     @id @default(autoincrement())
+  title           String
+  slug            String  @unique
+  description     String?
+  price           Int // VND, đã gồm VAT
+  stock_quantity  Int     @default(0)
+  cover_image_url String?
+  isbn            String?
+  publisher       String?
+  published_year  Int?
+  language        String?
+  pages           Int?
+  is_active       Boolean @default(true) // ẩn sách thay vì xóa (soft hide)
+
+  author_id Int
+  author    Author @relation(fields: [author_id], references: [id])
+
+  categories  BookCategory[]
+  cart_items  CartItem[]
+  order_items OrderItem[]
+
+  created_at DateTime @default(now())
+
+  @@index([author_id])
+}
+
+// Bảng junction cho quan hệ n-n Book ↔ Category
+model BookCategory {
+  book_id     Int
+  category_id Int
+
+  book     Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@id([book_id, category_id]) // composite PK: 1 sách không thuộc 1 thể loại 2 lần
+}
+
+// ---------- Cart ----------
+
+model Cart {
+  id      Int  @id @default(autoincrement())
+  user_id Int  @unique // @unique tạo quan hệ 1-1: mỗi user đúng 1 cart
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  items CartItem[]
+
+  updated_at DateTime @updatedAt
+}
+
+model CartItem {
+  id       Int @id @default(autoincrement())
+  cart_id  Int
+  book_id  Int
+  quantity Int
+
+  cart Cart @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [book_id], references: [id], onDelete: Cascade)
+
+  @@unique([cart_id, book_id]) // mỗi sách chỉ 1 dòng trong giỏ — merge cart dựa vào ràng buộc này
+}
+
+// ---------- Order (SNAPSHOT principle — THIET-KE.md mục 5.2) ----------
+
+model Order {
+  id         Int         @id @default(autoincrement())
+  order_code String      @unique // mã đơn hiển thị cho user, vd "BK-20260610-A1B2"
+  user_id    Int
+  user       User        @relation(fields: [user_id], references: [id])
+  status     OrderStatus @default(Pending)
+
+  // Tiền (VND): total = subtotal + shipping_fee - discount_amount
+  subtotal        Int
+  shipping_fee    Int
+  discount_amount Int @default(0)
+  total           Int
+
+  // Snapshot voucher — chỉ lưu code dạng string; FK voucher_id sẽ thêm khi làm bảng Voucher (NICE)
+  voucher_code String?
+
+  // Snapshot địa chỉ giao hàng — cố ý KHÔNG có FK về Address:
+  // user xóa/sửa address sau này thì đơn cũ vẫn đọc đúng địa chỉ lúc đặt
+  shipping_recipient_name String
+  shipping_phone          String
+  shipping_province_name  String
+  shipping_ward_name      String
+  shipping_street         String
+
+  note         String?
+  placed_at    DateTime  @default(now())
+  cancelled_at DateTime?
+
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([user_id])
+  @@index([status]) // cron auto-cancel quét đơn Pending theo cột này
+}
+
+model OrderItem {
+  id       Int   @id @default(autoincrement())
+  order_id Int
+  order    Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  // FK nullable + SetNull: nếu admin xóa Book, lịch sử đơn KHÔNG vỡ —
+  // book_id thành null nhưng các cột snapshot bên dưới vẫn giữ nguyên dữ liệu
+  book_id Int?
+  book    Book? @relation(fields: [book_id], references: [id], onDelete: SetNull)
+
+  // SNAPSHOT tại thời điểm đặt hàng
+  book_title               String
+  book_author_name         String
+  price_at_order           Int
+  cover_image_url_snapshot String?
+
+  quantity Int
+
+  @@index([order_id])
+}
+
+// ---------- Payment ----------
+
+// Tách bảng riêng (không nhét vào Order) để log được NHIỀU lần thử thanh toán:
+// VNPay fail lần 1, user bấm thanh toán lại → thêm 1 row Payment mới
+model Payment {
+  id       Int   @id @default(autoincrement())
+  order_id Int
+  order    Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  gateway PaymentGateway
+  txn_ref String?        @unique // vnp_TxnRef gửi sang VNPay, dùng đối chiếu khi callback
+  amount  Int
+  status  PaymentStatus  @default(Pending)
+
+  gateway_response Json? // lưu nguyên payload VNPay trả về để debug/đối soát
+
+  attempted_at DateTime  @default(now())
+  paid_at      DateTime?
+
+  @@index([order_id])
+}
+
+// ---------- ShippingZone ----------
+
+// Bảng config: phí ship theo tỉnh + ngưỡng free ship
+model ShippingZone {
+  id             Int    @id @default(autoincrement())
+  province_code  String @unique
+  fee            Int // VND
+  free_threshold Int? // đơn từ ngưỡng này trở lên free ship; null = không áp dụng free ship
+}

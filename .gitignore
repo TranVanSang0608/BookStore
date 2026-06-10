@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Env — KHÔNG commit secrets (DATABASE_URL, JWT_SECRET, Cloudinary, VNPay...)
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+
+# Prisma client tự sinh (chạy `npx prisma generate` để tạo lại)
+backend/src/generated/
+
+# Logs
+logs/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

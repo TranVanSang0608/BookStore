@@ -1,0 +1,7 @@
+/* Tailwind 4: cấu hình bằng CSS thay vì tailwind.config.js */
+@import 'tailwindcss';
+
+/* DaisyUI 5: nạp dưới dạng CSS plugin, dùng 2 theme sáng/tối có sẵn */
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
