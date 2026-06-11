@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { errorHandler } from './middleware/error';
 import authRoutes from './modules/auth/routes';
 import healthRoutes from './modules/health/routes';
+import userRoutes from './modules/user/routes';
 
 // Cấu hình Express app — tách riêng khỏi server.ts để sau này
 // Jest/Supertest có thể import app test trực tiếp mà không cần mở port.
@@ -25,6 +26,7 @@ const authLimiter = rateLimit({
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handler PHẢI đăng ký sau cùng để hứng lỗi từ mọi route phía trên
 app.use(errorHandler);

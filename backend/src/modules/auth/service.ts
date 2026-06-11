@@ -2,17 +2,8 @@ import bcrypt from 'bcrypt';
 import { signToken } from '../../lib/jwt';
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middleware/error';
+import { PUBLIC_USER_SELECT } from '../../utils/publicUser';
 import type { LoginInput, RegisterInput } from './schemas';
-
-// Các field của User được phép trả về cho FE — KHÔNG BAO GIỜ có password_hash
-const PUBLIC_USER_SELECT = {
-  id: true,
-  email: true,
-  name: true,
-  phone: true,
-  role: true,
-  created_at: true,
-} as const;
 
 export async function register(input: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
