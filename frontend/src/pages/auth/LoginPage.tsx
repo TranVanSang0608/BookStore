@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
+import { useAuth } from '../../hooks/useAuth'
 import { loginFormSchema, zodErrorsToMap } from '../../lib/validation'
-import { useAuth } from '../../store/AuthContext'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')

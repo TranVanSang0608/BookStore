@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useState, type ReactNode } from 'react'
 import type { PublicUser } from '../api/auth'
+import { AuthContext } from '../hooks/useAuth'
 import {
   clearStoredAuth,
   loadStoredAuth,
@@ -8,24 +10,21 @@ import {
 } from './authStorage'
 
 // "Client state" về phiên đăng nhập — khác với "server state" do React Query quản.
-// Mọi component gọi useAuth() đều thấy cùng một user và tự re-render khi login/logout.
-
-interface AuthContextValue {
-  user: PublicUser | null
-  isLoggedIn: boolean
-  login: (auth: StoredAuth) => void
-  logout: () => void
-  updateUser: (user: PublicUser) => void
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+// File này CHỈ export component AuthProvider (quy tắc Fast Refresh);
+// context object + hook useAuth nằm ở hooks/useAuth.ts.
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // useState(hàm): chỉ đọc localStorage MỘT lần lúc khởi tạo, không phải mỗi render —
   // nhờ vậy F5 trang vẫn giữ phiên đăng nhập
   const [auth, setAuth] = useState<StoredAuth | null>(loadStoredAuth)
 
+  // AuthProvider nằm trong QueryClientProvider (xem main.tsx) nên dùng được queryClient.
+  // queryClient.clear() khi đổi phiên: xóa sạch cache React Query để dữ liệu riêng tư
+  // của tài khoản trước (địa chỉ, sau này là giỏ hàng/đơn hàng) không lóe sang tài khoản sau.
+  const queryClient = useQueryClient()
+
   const login = (next: StoredAuth) => {
+    queryClient.clear() // gọi cả ở login: cover trường hợp đổi tài khoản mà không bấm logout
     saveStoredAuth(next)
     setAuth(next)
   }
@@ -33,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     clearStoredAuth()
     setAuth(null)
+    queryClient.clear()
   }
 
   // Sau khi PUT /users/me thành công, đồng bộ user mới vào context + localStorage
@@ -53,10 +53,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth phải được dùng bên trong <AuthProvider>')
-  return ctx
 }

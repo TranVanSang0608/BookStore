@@ -34,8 +34,13 @@ apiClient.interceptors.response.use(
 // Rút message lỗi tiếng Việt backend trả về để hiển thị lên form
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const message = (error.response?.data as { message?: string } | undefined)?.message
-    if (message) return message
+    const data = error.response?.data as
+      | { message?: string; errors?: Array<{ field: string; message: string }> }
+      | undefined
+    // Lỗi validate Zod từ backend có mảng errors theo field — ghép lại cho cụ thể
+    // (trường hợp FE đã validate nhưng vẫn lọt, vd 2 tab cùng sửa)
+    if (data?.errors?.length) return data.errors.map((e) => e.message).join('. ')
+    if (data?.message) return data.message
   }
   return 'Có lỗi xảy ra, vui lòng thử lại'
 }

@@ -2,8 +2,8 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getApiErrorMessage } from '../../api/client'
 import { updateProfileApi } from '../../api/user'
+import { useAuth } from '../../hooks/useAuth'
 import { profileFormSchema, zodErrorsToMap } from '../../lib/validation'
-import { useAuth } from '../../store/AuthContext'
 
 export default function ProfileInfoForm() {
   const { user, updateUser } = useAuth()

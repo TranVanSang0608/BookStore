@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
+import { useAuth } from '../../hooks/useAuth'
 import { registerFormSchema, zodErrorsToMap } from '../../lib/validation'
-import { useAuth } from '../../store/AuthContext'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({

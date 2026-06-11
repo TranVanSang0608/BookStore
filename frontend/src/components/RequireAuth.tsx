@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../store/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 // Bọc các trang cần đăng nhập: chưa đăng nhập → đá về /login,
 // kèm state.from để login xong quay lại đúng trang đang định vào
