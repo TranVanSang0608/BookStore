@@ -93,4 +93,59 @@ Trong `frontend/`:
 
 ---
 
-*(Phase 1 — Auth + User + Address: sẽ ghi tiếp tại đây)*
+## Phase 1 — Auth + User + Address (2026-06-11)
+
+### Mục tiêu phase
+
+Người dùng đăng ký/đăng nhập từ giao diện web, quản lý profile + đổi mật khẩu,
+CRUD sổ địa chỉ với dropdown Tỉnh → Phường/Xã đọc từ DB. Middleware `auth`/`adminOnly`
+thật thay stub. Những unit test Jest đầu tiên của dự án.
+
+### Đã làm (5 lát, mỗi lát 1 commit)
+
+| Lát | Nội dung | Kết quả xác minh |
+|---|---|---|
+| 1 | Backend Auth: `lib/jwt.ts`, middleware auth/adminOnly thật, module auth (register/login), rate limit 20 req/15p cho `/api/auth/*` | 5 unit test + 5 kịch bản HTTP (201/409/401/200/400) |
+| 2 | User profile: GET/PUT `/users/me`, PUT `/users/me/password` | 4 unit test + 8 kịch bản HTTP (login mật khẩu cũ fail, mới OK) |
+| 3 | Locations API (public) + Address CRUD + đặt mặc định | 6 unit test + 9 kịch bản (ownership 404, ward lệch tỉnh 400) |
+| 4 | FE Auth: AuthContext + localStorage, 2 interceptor axios, trang login/register, RequireAuth, Navbar | Verify trên browser: đăng ký → navbar chào tên, F5 giữ phiên, logout, login sai hiện lỗi API |
+| 5 | FE Profile: sửa thông tin (navbar đổi theo), đổi mật khẩu, sổ địa chỉ với dropdown liên động | Verify trên browser: 34 tỉnh/126 xã load đúng, badge default chuyển đúng, xóa OK |
+
+### Khái niệm cần hiểu để bảo vệ
+
+**Bảo mật (hội đồng rất hay hỏi nhóm này):**
+
+1. **401 vs 403** — `auth` trả 401 ("chưa xác thực"), `adminOnly` trả 403 ("đã xác thực nhưng không đủ quyền").
+2. **Chống user enumeration** — login sai email và sai password trả CÙNG một thông báo "Email hoặc mật khẩu không đúng"; ownership check địa chỉ trả 404 thay vì 403 (không tiết lộ dữ liệu người khác tồn tại).
+3. **Chống mass assignment** — `updateMe` chỉ nhận đúng name/phone; client gửi `role: "admin"` cũng bị Zod strip + service bỏ qua.
+4. **Đổi mật khẩu phải nhập mật khẩu hiện tại** — chống máy đang đăng nhập bị người khác chiếm tài khoản.
+5. **Server không tin client** — địa chỉ chỉ nhận CODE tỉnh/xã, server tra NAME từ DB + kiểm tra ward thuộc đúng tỉnh.
+6. **Rate limit** `/api/auth/*` 20 req/15 phút chống brute-force (express-rate-limit, có header RateLimit-*).
+7. **Trade-off JWT thuần**: đổi mật khẩu xong token cũ vẫn sống tới hết hạn 7d — thu hồi ngay cần RefreshToken (tier NICE). Biết và nói được trade-off là điểm cộng.
+
+**Backend:**
+
+8. **Declaration merging** (`types/express.d.ts`) — mở rộng interface `Request` của Express để `req.user` có type; controller dùng `req.user!.id` an toàn vì mọi route đứng sau `router.use(auth)`.
+9. **JWT payload tối thiểu** `{sub, role}` — thông tin đổi được thì lấy từ DB, token đã ký không sửa được.
+10. **Transaction đặt địa chỉ mặc định** — "bỏ cờ cũ + set cờ mới" atomic, không bao giờ 2 default. Dùng cả 2 dạng `$transaction`: mảng (lệnh độc lập) và callback (lệnh sau phụ thuộc lệnh trước). Đây là bản nháp của transaction trừ stock Phase 4.
+11. **Unit test mock Prisma** — `jest.mock('../lib/prisma')` thay module bằng jest.fn(), test logic thuần không chạm DB, 15 test chạy ~1s.
+12. **Error handler phân loại lỗi 4xx của Express** — body JSON sai cú pháp trả 400 (lỗi client), không quy về 500 (lỗi hệ thống).
+
+**Frontend:**
+
+13. **AuthContext (client state) vs React Query (server state)** — phiên đăng nhập là client state; dữ liệu API (addresses, provinces) là server state có cache + invalidate.
+14. **2 interceptor trên 1 axios instance** — request: tự gắn `Authorization: Bearer`; response: 401 khi đang giữ token → tự logout (bỏ qua `/auth/*` vì login sai cũng 401).
+15. **`useState(loadStoredAuth)` lazy initializer** — đọc localStorage đúng 1 lần lúc mount → F5 giữ phiên.
+16. **`RequireAuth` + `state.from`** — bị đá về login từ đâu thì login xong quay lại đó.
+17. **Dropdown liên động bằng React Query** — query wards có `enabled: !!province_code`; đổi tỉnh → queryKey đổi → tự fetch; `staleTime: Infinity` vì địa giới bất biến.
+18. **`invalidateQueries(['addresses'])`** sau mọi mutation — đánh dấu cache cũ, React Query tự refetch, UI tự cập nhật không cần setState tay.
+19. **Tách `authStorage.ts`** khỏi AuthContext để axios interceptor dùng chung mà không import vòng tròn.
+
+### Việc còn treo
+
+- AGENTS.md (bản copy CLAUDE.md cho Codex) đang lỗi thời — đồng bộ tay nếu còn dùng Codex.
+- Token cũ sau đổi mật khẩu vẫn sống (trade-off JWT thuần, xem mục 7).
+
+---
+
+*(Phase 2 — Catalog: Book + Author + Category CRUD + Search/Filter: sẽ ghi tiếp tại đây)*

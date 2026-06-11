@@ -15,6 +15,7 @@ interface AuthContextValue {
   isLoggedIn: boolean
   login: (auth: StoredAuth) => void
   logout: () => void
+  updateUser: (user: PublicUser) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -34,9 +35,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuth(null)
   }
 
+  // Sau khi PUT /users/me thành công, đồng bộ user mới vào context + localStorage
+  // (giữ nguyên token) — navbar "Xin chào, ..." tự cập nhật theo
+  const updateUser = (user: PublicUser) => {
+    setAuth((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, user }
+      saveStoredAuth(next)
+      return next
+    })
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user: auth?.user ?? null, isLoggedIn: auth !== null, login, logout }}
+      value={{ user: auth?.user ?? null, isLoggedIn: auth !== null, login, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>

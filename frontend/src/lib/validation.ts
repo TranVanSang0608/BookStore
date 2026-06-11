@@ -26,6 +26,37 @@ export const registerFormSchema = z
     path: ['confirm_password'],
   })
 
+export const profileFormSchema = z.object({
+  name: z.string().min(1, 'Tên không được để trống').max(100, 'Tên tối đa 100 ký tự'),
+  phone: z
+    .string()
+    .regex(/^0\d{9}$/, 'Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0')
+    .or(z.literal('')),
+})
+
+export const changePasswordFormSchema = z
+  .object({
+    current_password: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại'),
+    new_password: z.string().min(8, 'Mật khẩu mới phải có ít nhất 8 ký tự'),
+    confirm_new_password: z.string(),
+  })
+  .refine((d) => d.new_password === d.confirm_new_password, {
+    message: 'Mật khẩu nhập lại không khớp',
+    path: ['confirm_new_password'],
+  })
+  .refine((d) => d.current_password !== d.new_password, {
+    message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
+    path: ['new_password'],
+  })
+
+export const addressFormSchema = z.object({
+  recipient_name: z.string().min(1, 'Tên người nhận không được để trống').max(100),
+  phone: z.string().regex(/^0\d{9}$/, 'Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0'),
+  province_code: z.string().min(1, 'Vui lòng chọn tỉnh/thành phố'),
+  ward_code: z.string().min(1, 'Vui lòng chọn phường/xã'),
+  street_detail: z.string().min(1, 'Vui lòng nhập số nhà, tên đường').max(255),
+})
+
 // Gom lỗi Zod thành { tên_field: message } cho form hiển thị dưới từng ô input
 export function zodErrorsToMap(error: z.ZodError): Record<string, string> {
   const map: Record<string, string> = {}

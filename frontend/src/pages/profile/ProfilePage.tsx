@@ -1,17 +1,15 @@
-import { useAuth } from '../../store/AuthContext'
+import AddressBook from './AddressBook'
+import ChangePasswordForm from './ChangePasswordForm'
+import ProfileInfoForm from './ProfileInfoForm'
 
-// Placeholder cho Lát 5 — hiện chỉ chứng minh RequireAuth hoạt động.
-// Lát 5 sẽ thay bằng trang profile thật (sửa thông tin, đổi mật khẩu, sổ địa chỉ).
+// Trang "Tài khoản của tôi" — 3 khối độc lập, mỗi khối tự quản state + mutation riêng
 export default function ProfilePage() {
-  const { user } = useAuth()
-
   return (
-    <div className="py-16 px-4 text-center space-y-2">
+    <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
       <h1 className="text-2xl font-bold">Tài khoản của tôi</h1>
-      <p>
-        Đăng nhập với: <span className="font-semibold">{user!.email}</span>
-      </p>
-      <p className="text-base-content/60">Trang này sẽ hoàn thiện ở Lát 5 (profile + sổ địa chỉ).</p>
+      <ProfileInfoForm />
+      <ChangePasswordForm />
+      <AddressBook />
     </div>
   )
 }

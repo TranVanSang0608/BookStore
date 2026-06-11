@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Đồ án sinh viên: **Website bán sách trực tuyến** (sách giấy, B2C, tiếng Việt, thanh toán COD + VNPay sandbox). Toàn bộ quyết định kiến trúc nằm trong **[THIET-KE.md](THIET-KE.md)** ở root repo — đây là source of truth, đọc nó trước khi code bất kỳ module nào.
 
-**Trạng thái (2026-06-10):** **Phase 0 HOÀN THÀNH** (chi tiết + khái niệm ôn tập: [DEV-LOG.md](DEV-LOG.md)). Đã xác minh end-to-end: FE (:5173) → BE (:3000) → Neon (`/api/health` trả `database: connected`), schema CORE 14 bảng migrate + seed xong trên Neon, Cloudinary smoke test OK. Tiếp theo: **Phase 1 — Auth + User + Address** (middleware auth/adminOnly đang là stub chờ implement). VNPay credentials chưa điền (Phase 5).
+**Trạng thái (2026-06-11):** **Phase 1 HOÀN THÀNH** (chi tiết + khái niệm ôn tập: [DEV-LOG.md](DEV-LOG.md)). Auth (register/login + JWT + rate limit), User profile + đổi mật khẩu, Address book + Locations API — đầy đủ BE (15 unit test) lẫn FE (AuthContext, interceptor, trang login/register/profile với dropdown địa chỉ liên động), đã verify trên browser thật. Tiếp theo: **Phase 2 — Catalog** (Book + Author + Category CRUD admin, list/detail/search/filter user, upload ảnh bìa qua Cloudinary). VNPay credentials chưa điền (Phase 5).
 
 ## Lệnh dev & test
 
