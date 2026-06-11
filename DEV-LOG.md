@@ -148,4 +148,35 @@ thật thay stub. Những unit test Jest đầu tiên của dự án.
 
 ---
 
+## Code review vòng 1 — sau Phase 1 (2026-06-11)
+
+> Review toàn bộ code Phase 0+1, tìm ra 4 lỗi Major + 3 Minor. Tất cả đã sửa trong 3 lát
+> (commit `c7dcd4f`, `5907623`, và lát tài liệu này). Mục này quan trọng khi bảo vệ:
+> thể hiện quy trình có review, và mỗi lỗi là một câu hỏi hội đồng tiềm năng.
+
+### Các lỗi đã sửa & bài học
+
+| # | Lỗi | Fix | Bài học cần nhớ |
+|---|---|---|---|
+| 1 | ESLint fail: `AuthContext.tsx` export cả context + hook lẫn component | Tách context + `useAuth` ra `hooks/useAuth.ts` | Quy tắc **Fast Refresh** của Vite: file chứa component chỉ được export component, nếu không hot-reload hỏng ngầm |
+| 2 | **Rò cache giữa 2 tài khoản**: user A logout, user B login cùng phiên browser → React Query có thể trả địa chỉ của A từ cache | `queryClient.clear()` ở **cả login lẫn logout** trong AuthProvider | Cache là trạng thái toàn cục — đổi danh tính người dùng thì mọi dữ liệu riêng tư trong cache phải bị xóa. Clear ở cả 2 cửa ngõ để cover "login đè không logout" |
+| 3 | Tin raw localStorage: JSON thiếu `user` vẫn coi là đăng nhập → crash `user!.name` | `authStorage` validate shape bằng Zod, hỏng thì dọn key + coi như chưa đăng nhập | **localStorage là input không tin được** — user/extension sửa tùy ý, phải validate như request body ở backend |
+| 4 | Invariant default chưa chặt: backend cho xóa địa chỉ default → user còn N địa chỉ nhưng 0 default; UI thì ẩn nút Xóa kể cả khi chỉ còn 1 địa chỉ | BE: chặn 400 nếu xóa default mà còn địa chỉ khác, cho xóa nếu là duy nhất. UI đồng bộ rule | **Backend thực thi invariant, UI chỉ phản ánh** — ẩn nút không phải là bảo vệ, gọi API trực tiếp vẫn phá được |
+| 5 | Email không normalize → `A@test.com` và `a@test.com` là 2 tài khoản (Postgres unique phân biệt hoa/thường) | `trim().toLowerCase()` đầu register + login | Unique constraint của DB chỉ đúng khi dữ liệu vào đã được chuẩn hóa một kiểu |
+| 6 | `getApiErrorMessage` bỏ qua mảng `errors[]` chi tiết từng field của Zod backend | Ghép message các field khi có `errors[]` | Format lỗi backend có 2 tầng (message chung + errors theo field) — FE phải đọc cả hai |
+| 7 | AGENTS.md (copy của CLAUDE.md cho Codex) lệch trạng thái | Biến thành **file trỏ** sang CLAUDE.md | Tài liệu duplicate sớm muộn cũng lệch — một nguồn sự thật duy nhất |
+
+### Ghi nhận nhưng hoãn (đúng nguyên tắc CORE-trước, xem D22)
+
+- Supertest integration test cho `/api/auth/*`, `/api/addresses/*` — tier NICE, sau checkpoint Phase 5.
+- Test framework cho FE (vitest) — gốc lỗi localStorage đã triệt bằng Zod; cân nhắc ở checkpoint.
+- CI chạy lint/typecheck/test — khi setup deploy (Phase 10).
+
+### Sự cố quy trình đáng nhớ (để không lặp lại)
+
+- **PowerShell 5.1 phá UTF-8**: dùng `Get-Content`/`Set-Content` sửa file hàng loạt làm tiếng Việt thành mojibake (PS đọc file không BOM theo ANSI). Quy tắc mới: sửa file code bằng Edit/Write tool, không sed bằng PowerShell.
+- **`git add .` cuốn file tạm**: file JSON tạm của E2E test bị commit nhầm, phải thêm 2 commit chore để dọn. Quy tắc mới: file tạm đặt ngoài repo hoặc xóa ngay trong cùng lệnh tạo ra nó.
+
+---
+
 *(Phase 2 — Catalog: Book + Author + Category CRUD + Search/Filter: sẽ ghi tiếp tại đây)*
