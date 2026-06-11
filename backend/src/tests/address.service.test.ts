@@ -1,6 +1,6 @@
 // Unit test cho address service — mock Prisma, không chạm DB thật
 import { prisma } from '../lib/prisma';
-import { createAddress, setDefaultAddress } from '../modules/address/service';
+import { createAddress, deleteAddress, setDefaultAddress } from '../modules/address/service';
 
 jest.mock('../lib/prisma', () => ({
   prisma: {
@@ -10,6 +10,7 @@ jest.mock('../lib/prisma', () => ({
       update: jest.fn(),
       updateMany: jest.fn(),
       findFirst: jest.fn(),
+      delete: jest.fn(),
     },
     ward: {
       findUnique: jest.fn(),
@@ -28,6 +29,7 @@ const mockCreate = prisma.address.create as jest.Mock;
 const mockUpdateMany = prisma.address.updateMany as jest.Mock;
 const mockUpdate = prisma.address.update as jest.Mock;
 const mockFindFirst = prisma.address.findFirst as jest.Mock;
+const mockDelete = prisma.address.delete as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -91,6 +93,34 @@ describe('createAddress', () => {
       where: { user_id: 1, is_default: true },
       data: { is_default: false },
     });
+  });
+});
+
+describe('deleteAddress — invariant địa chỉ mặc định', () => {
+  it('chặn 400 khi xóa địa chỉ default mà user còn địa chỉ khác', async () => {
+    mockFindFirst.mockResolvedValue({ id: 5, user_id: 1, is_default: true });
+    mockCount.mockResolvedValue(2); // còn 1 địa chỉ khác
+
+    await expect(deleteAddress(1, 5)).rejects.toMatchObject({ statusCode: 400 });
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('cho xóa địa chỉ default khi nó là địa chỉ DUY NHẤT', async () => {
+    mockFindFirst.mockResolvedValue({ id: 5, user_id: 1, is_default: true });
+    mockCount.mockResolvedValue(1); // địa chỉ duy nhất
+
+    await deleteAddress(1, 5);
+
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: 5 } });
+  });
+
+  it('xóa địa chỉ thường (không default) bình thường, không cần đếm', async () => {
+    mockFindFirst.mockResolvedValue({ id: 6, user_id: 1, is_default: false });
+
+    await deleteAddress(1, 6);
+
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: 6 } });
+    expect(mockCount).not.toHaveBeenCalled();
   });
 });
 

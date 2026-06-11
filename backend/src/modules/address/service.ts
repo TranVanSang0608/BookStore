@@ -84,7 +84,18 @@ export async function updateAddress(userId: number, addressId: number, input: Up
 }
 
 export async function deleteAddress(userId: number, addressId: number) {
-  await getOwnedAddress(userId, addressId);
+  const address = await getOwnedAddress(userId, addressId);
+
+  // Invariant: user còn địa chỉ thì luôn phải có đúng 1 default.
+  // Xóa default khi còn địa chỉ khác sẽ phá invariant → chặn, bắt đặt default mới trước.
+  // Ngoại lệ: là địa chỉ DUY NHẤT thì cho xóa (còn 0 địa chỉ — không cần default).
+  if (address.is_default) {
+    const count = await prisma.address.count({ where: { user_id: userId } });
+    if (count > 1) {
+      throw new AppError(400, 'Hãy đặt địa chỉ khác làm mặc định trước khi xóa địa chỉ này');
+    }
+  }
+
   await prisma.address.delete({ where: { id: addressId } });
 }
 

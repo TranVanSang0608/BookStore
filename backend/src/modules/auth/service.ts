@@ -6,14 +6,18 @@ import { PUBLIC_USER_SELECT } from '../../utils/publicUser';
 import type { LoginInput, RegisterInput } from './schemas';
 
 export async function register(input: RegisterInput) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+  // Normalize email: Postgres unique phân biệt hoa/thường, không normalize thì
+  // "A@test.com" và "a@test.com" thành 2 tài khoản khác nhau
+  const email = input.email.trim().toLowerCase();
+
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new AppError(409, 'Email đã được đăng ký');
 
   // bcrypt cost 10: mỗi lần hash ~100ms — đủ chậm để chống dò pass, đủ nhanh cho UX
   const password_hash = await bcrypt.hash(input.password, 10);
 
   const user = await prisma.user.create({
-    data: { email: input.email, password_hash, name: input.name, phone: input.phone },
+    data: { email, password_hash, name: input.name, phone: input.phone },
     select: PUBLIC_USER_SELECT,
   });
 
@@ -23,7 +27,9 @@ export async function register(input: RegisterInput) {
 }
 
 export async function login(input: LoginInput) {
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  // Normalize giống register — user gõ "A@Test.com" vẫn login được tài khoản "a@test.com"
+  const email = input.email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email } });
 
   // Cùng MỘT thông báo cho "email không tồn tại" và "sai mật khẩu":
   // không cho kẻ tấn công dò được email nào đã đăng ký (user enumeration)

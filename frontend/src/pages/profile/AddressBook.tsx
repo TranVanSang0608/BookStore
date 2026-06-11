@@ -57,25 +57,27 @@ export default function AddressBook() {
                   Sửa
                 </button>
                 {!addr.is_default && (
-                  <>
-                    <button
-                      className="link"
-                      onClick={() => defaultMutation.mutate(addr.id)}
-                      disabled={defaultMutation.isPending}
-                    >
-                      Đặt mặc định
-                    </button>
-                    <button
-                      className="link link-error"
-                      onClick={() => {
-                        // confirm() đơn giản đủ dùng cho đồ án — xóa là thao tác không hoàn tác
-                        if (window.confirm('Xóa địa chỉ này?')) deleteMutation.mutate(addr.id)
-                      }}
-                      disabled={deleteMutation.isPending}
-                    >
-                      Xóa
-                    </button>
-                  </>
+                  <button
+                    className="link"
+                    onClick={() => defaultMutation.mutate(addr.id)}
+                    disabled={defaultMutation.isPending}
+                  >
+                    Đặt mặc định
+                  </button>
+                )}
+                {/* Khớp rule backend: default chỉ xóa được khi là địa chỉ DUY NHẤT
+                    (xóa xong còn 0 địa chỉ — không phá invariant "luôn có 1 default") */}
+                {(!addr.is_default || addresses?.length === 1) && (
+                  <button
+                    className="link link-error"
+                    onClick={() => {
+                      // confirm() đơn giản đủ dùng cho đồ án — xóa là thao tác không hoàn tác
+                      if (window.confirm('Xóa địa chỉ này?')) deleteMutation.mutate(addr.id)
+                    }}
+                    disabled={deleteMutation.isPending}
+                  >
+                    Xóa
+                  </button>
                 )}
               </div>
             </div>

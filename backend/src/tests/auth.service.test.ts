@@ -63,6 +63,37 @@ describe('register', () => {
   });
 });
 
+describe('register — normalize email', () => {
+  it('lưu email lowercase dù user gõ chữ hoa + thừa khoảng trắng', async () => {
+    mockFindUnique.mockResolvedValue(null);
+    mockCreate.mockResolvedValue({
+      id: 1,
+      email: 'viethoa@test.vn',
+      name: 'X',
+      phone: null,
+      role: 'user',
+      created_at: new Date(),
+    });
+
+    await register({ email: ' VietHoa@Test.VN ', password: 'matkhau123', name: 'X' });
+
+    // Cả bước check trùng lẫn bước lưu đều phải dùng email đã normalize
+    expect(mockFindUnique).toHaveBeenCalledWith({ where: { email: 'viethoa@test.vn' } });
+    expect(mockCreate.mock.calls[0][0].data.email).toBe('viethoa@test.vn');
+  });
+});
+
+describe('login', () => {
+  it('tìm user bằng email lowercase dù gõ chữ hoa', async () => {
+    mockFindUnique.mockResolvedValue(null); // không cần user thật — chỉ kiểm tra cách query
+
+    await expect(login({ email: 'VietHoa@Test.VN', password: 'x' })).rejects.toMatchObject({
+      statusCode: 401,
+    });
+    expect(mockFindUnique).toHaveBeenCalledWith({ where: { email: 'viethoa@test.vn' } });
+  });
+});
+
 describe('login', () => {
   it('ném AppError 401 khi email không tồn tại', async () => {
     mockFindUnique.mockResolvedValue(null);
