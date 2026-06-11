@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 
-// TODO Phase 1 (Auth): chạy SAU middleware auth, kiểm tra req.user.role === 'admin',
-// nếu không phải admin thì trả 403.
-export function adminOnly(_req: Request, _res: Response, _next: NextFunction) {
-  throw new Error('adminOnly middleware chưa được implement — sẽ làm ở Phase 1');
+// Middleware phân quyền: PHẢI đứng sau auth trong chuỗi middleware.
+// Nếu quên gắn auth trước thì req.user là undefined → vẫn bị chặn (an toàn mặc định).
+export function adminOnly(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== 'admin') {
+    res.status(403).json({ success: false, message: 'Chỉ quản trị viên được phép thực hiện' });
+    return;
+  }
+  next();
 }
