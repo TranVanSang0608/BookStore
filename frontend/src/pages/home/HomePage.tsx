@@ -1,42 +1,52 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchHealth } from '../../api/health'
+import { Link } from 'react-router-dom'
+import { fetchBooks } from '../../api/books'
+import BookCard from '../../features/catalog/BookCard'
 
-// Trang chủ tạm thời của Phase 0/1 — Phase 2 sẽ thay bằng trang chủ thật
-// (navbar đã chuyển vào components/Layout dùng chung cho mọi trang)
+// Trang chủ: banner + dải 8 sách mới nhất (tái dùng BookCard của trang list)
 export default function HomePage() {
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['health'],
-    queryFn: fetchHealth,
+  const { data, isPending } = useQuery({
+    queryKey: ['books', { limit: '8' }],
+    queryFn: () => fetchBooks({ limit: '8' }), // sort mặc định = newest
   })
 
   return (
-    <div className="hero py-20">
-      <div className="hero-content text-center">
-        <div className="max-w-md space-y-6">
-          <h1 className="text-4xl font-bold">Nhà sách trực tuyến</h1>
-          <p className="text-base-content/70">
-            Phase 1 — Auth đang hoàn thiện. Trang chủ thật sẽ được xây ở Phase 2.
-          </p>
-
-          {isPending && <span className="loading loading-spinner loading-lg" />}
-
-          {isError && (
-            <div className="alert alert-error">
-              Không gọi được API — kiểm tra backend đã chạy ở cổng 3000 chưa.
-            </div>
-          )}
-
-          {data && (
-            <div className="flex gap-2 justify-center">
-              <span className="badge badge-success">API: online</span>
-              <span
-                className={`badge ${data.database === 'connected' ? 'badge-success' : 'badge-error'}`}
-              >
-                Database: {data.database}
-              </span>
-            </div>
-          )}
+    <div className="max-w-6xl mx-auto p-4 space-y-8">
+      <div className="hero bg-base-100 rounded-box shadow py-14">
+        <div className="hero-content text-center">
+          <div className="max-w-md space-y-4">
+            <h1 className="text-4xl font-bold">Nhà sách trực tuyến</h1>
+            <p className="text-base-content/70">
+              Hàng nghìn đầu sách hay, giao tận nơi toàn quốc
+            </p>
+            <Link to="/books" className="btn btn-primary">
+              Khám phá ngay
+            </Link>
+          </div>
         </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Sách mới</h2>
+          <Link to="/books" className="link link-primary text-sm">
+            Xem tất cả →
+          </Link>
+        </div>
+
+        {isPending && (
+          <div className="flex justify-center py-10">
+            <span className="loading loading-spinner loading-lg" />
+          </div>
+        )}
+
+        {data && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {data.items.map((book) => (
+              <BookCard key={book.id} book={book} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

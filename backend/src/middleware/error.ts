@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import multer from 'multer';
 import { logger } from '../lib/logger';
 
 // Lỗi nghiệp vụ có chủ đích, ví dụ: throw new AppError(409, 'Email đã tồn tại')
@@ -17,6 +18,16 @@ export class AppError extends Error {
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ success: false, message: err.message });
+    return;
+  }
+
+  // Lỗi từ multer (upload file): file quá to, sai field... — lỗi phía client → 400
+  if (err instanceof multer.MulterError) {
+    const message =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'Ảnh vượt quá dung lượng tối đa 2MB'
+        : 'File tải lên không hợp lệ';
+    res.status(400).json({ success: false, message });
     return;
   }
 
