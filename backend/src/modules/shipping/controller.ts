@@ -1,0 +1,20 @@
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { AppError } from '../../middleware/error';
+import * as shippingService from './service';
+
+// Query string parse tại controller (middleware validate() chỉ chạy trên body).
+// Khác listBooks dùng .catch() cho giá trị mặc định: ở đây province_code SAI là lỗi thật
+// (không có mặc định hợp lý) → safeParse + 400
+const feeQuerySchema = z.object({
+  province_code: z.string().min(1, 'Thiếu mã tỉnh/thành phố'),
+  subtotal: z.coerce.number().int().nonnegative('Tạm tính không hợp lệ'),
+});
+
+export async function getFee(req: Request, res: Response) {
+  const result = feeQuerySchema.safeParse(req.query);
+  if (!result.success) throw new AppError(400, 'Tham số không hợp lệ');
+
+  const fee = await shippingService.calcShippingFee(result.data.province_code, result.data.subtotal);
+  res.json({ success: true, data: fee });
+}

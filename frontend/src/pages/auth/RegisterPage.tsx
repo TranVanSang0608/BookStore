@@ -21,8 +21,10 @@ export default function RegisterPage() {
 
   const mutation = useMutation({
     mutationFn: registerApi,
-    onSuccess: (data) => {
-      login(data) // backend cấp token ngay khi đăng ký — không bắt login lại
+    // backend cấp token ngay khi đăng ký — không bắt login lại.
+    // await login để merge giỏ guest xong rồi mới navigate (xem LoginPage)
+    onSuccess: async (data) => {
+      await login(data)
       navigate('/')
     },
   })

@@ -21,8 +21,10 @@ export default function LoginPage() {
   // cho sẵn isPending để khóa nút, error để hiển thị lỗi từ server
   const mutation = useMutation({
     mutationFn: loginApi,
-    onSuccess: (data) => {
-      login(data)
+    // await login: chờ merge giỏ guest xong rồi mới rời trang đăng nhập,
+    // để /checkout (hoặc trang from) hiển thị giỏ đã merge ngay, không nhấp nháy rỗng
+    onSuccess: async (data) => {
+      await login(data)
       navigate(from, { replace: true })
     },
   })

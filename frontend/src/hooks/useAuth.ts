@@ -10,7 +10,9 @@ import type { StoredAuth } from '../store/authStorage'
 export interface AuthContextValue {
   user: PublicUser | null
   isLoggedIn: boolean
-  login: (auth: StoredAuth) => void
+  // login async: trang gọi await trước khi điều hướng để merge giỏ xong mới rời trang —
+  // tránh checkout/giỏ thấy "rỗng tạm thời" do navigate chạy trước merge
+  login: (auth: StoredAuth) => Promise<void>
   logout: () => void
   updateUser: (user: PublicUser) => void
 }

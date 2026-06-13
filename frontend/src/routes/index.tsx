@@ -1,8 +1,19 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import AdminLayout from '../components/AdminLayout'
 import Layout from '../components/Layout'
+import RequireAdmin from '../components/RequireAdmin'
 import RequireAuth from '../components/RequireAuth'
+import AdminAuthorsPage from '../pages/admin/AdminAuthorsPage'
+import AdminBookFormPage from '../pages/admin/AdminBookFormPage'
+import AdminBooksPage from '../pages/admin/AdminBooksPage'
+import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
+import AuthorPage from '../pages/books/AuthorPage'
+import BookDetailPage from '../pages/books/BookDetailPage'
+import BookListPage from '../pages/books/BookListPage'
+import CartPage from '../pages/cart/CartPage'
+import CheckoutPage from '../pages/checkout/CheckoutPage'
 import HomePage from '../pages/home/HomePage'
 import ProfilePage from '../pages/profile/ProfilePage'
 
@@ -13,6 +24,11 @@ export default function AppRoutes() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/books" element={<BookListPage />} />
+        <Route path="/books/:slug" element={<BookDetailPage />} />
+        <Route path="/author/:id" element={<AuthorPage />} />
+        {/* Giỏ hàng KHÔNG cần đăng nhập (D2 — guest cart); checkout mới bắt buộc */}
+        <Route path="/cart" element={<CartPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
@@ -23,6 +39,33 @@ export default function AppRoutes() {
             </RequireAuth>
           }
         />
+        {/* Checkout bắt buộc đăng nhập (D2) — guest từ /cart sẽ qua /login rồi quay lại đây */}
+        <Route
+          path="/checkout"
+          element={
+            <RequireAuth>
+              <CheckoutPage />
+            </RequireAuth>
+          }
+        />
+
+        {/* Khu quản trị: route lồng nhau — AdminLayout render sidebar,
+            trang con hiện vào <Outlet/>. RequireAdmin chặn user thường. */}
+        <Route
+          path="/admin"
+          element={
+            <RequireAdmin>
+              <AdminLayout />
+            </RequireAdmin>
+          }
+        >
+          <Route index element={<Navigate to="/admin/books" replace />} />
+          <Route path="books" element={<AdminBooksPage />} />
+          <Route path="books/new" element={<AdminBookFormPage />} />
+          <Route path="books/:id/edit" element={<AdminBookFormPage />} />
+          <Route path="categories" element={<AdminCategoriesPage />} />
+          <Route path="authors" element={<AdminAuthorsPage />} />
+        </Route>
       </Route>
     </Routes>
   )

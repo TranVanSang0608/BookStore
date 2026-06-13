@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Đồ án sinh viên: **Website bán sách trực tuyến** (sách giấy, B2C, tiếng Việt, thanh toán COD + VNPay sandbox). Toàn bộ quyết định kiến trúc nằm trong **[THIET-KE.md](THIET-KE.md)** ở root repo — đây là source of truth, đọc nó trước khi code bất kỳ module nào.
 
-**Trạng thái (2026-06-11):** **Phase 1 HOÀN THÀNH** (chi tiết + khái niệm ôn tập: [DEV-LOG.md](DEV-LOG.md)). Auth (register/login + JWT + rate limit), User profile + đổi mật khẩu, Address book + Locations API — đầy đủ BE (15 unit test) lẫn FE (AuthContext, interceptor, trang login/register/profile với dropdown địa chỉ liên động), đã verify trên browser thật. Tiếp theo: **Phase 2 — Catalog** (Book + Author + Category CRUD admin, list/detail/search/filter user, upload ảnh bìa qua Cloudinary). VNPay credentials chưa điền (Phase 5).
+**Trạng thái (2026-06-12):** **Phase 3 HOÀN THÀNH** (chi tiết + khái niệm ôn tập: [DEV-LOG.md](DEV-LOG.md)). Cart + Checkout đầy đủ: BE module `cart/` (CRUD theo book_id, add cộng dồn, merge max(qty) idempotent + clamp — D37/D39) + `shipping/` (`calcShippingFee` zone + free threshold, nguồn sự thật duy nhất — D40) + `GET /api/books/batch` (guest enrich — D38); FE `CartContext` 2 chế độ (guest localStorage validate Zod / user DB), badge Navbar, nút thêm giỏ ở detail, trang `/cart` (stepper + cảnh báo dòng chết) + `/checkout` (radio địa chỉ, phí ship tự refetch theo zone, nút Đặt hàng disabled chờ Phase 4). 64 unit test xanh, verify trọn flow guest→login→merge→checkout trên browser. Tiếp theo: **Phase 4 — Order** (transaction tạo/hủy đơn, snapshot, admin quản lý đơn — thay nút Đặt hàng disabled bằng createOrder thật). VNPay credentials chưa điền (Phase 5).
 
 ## Lệnh dev & test
 
