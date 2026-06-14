@@ -338,4 +338,177 @@ Cart/CartItem/ShippingZone có từ Phase 0.
 
 ---
 
-*(Phase 4 — Order: transaction tạo/hủy đơn + admin quản lý đơn: sẽ ghi tiếp tại đây)*
+## Phase 4 — Order (2026-06-13)
+
+### Mục tiêu phase
+
+Khép kín luồng CORE: thay nút "Đặt hàng" disabled (Phase 3) bằng `createOrder` thật —
+đặt đơn COD trừ kho trong transaction, user xem/hủy đơn, admin quản lý + đổi trạng thái,
+cron tự hủy đơn treo >24h. **Không cần migration** — Order/OrderItem/Payment + enum
+có từ Phase 0. NGOÀI scope: VNPay (Phase 5), voucher/email/review (NICE).
+
+### Đã làm (6 lát)
+
+| Lát | Nội dung | Kết quả xác minh |
+|---|---|---|
+| 1 | `lib/order-code.ts` + module `order/` service: createOrder (transaction snapshot + conditional decrement), cancelOrder (idempotent hoàn kho), getUserOrders/getOrderByCode/admin*, state machine | 21 unit test (snapshot, oversell 409 rollback, hoàn kho, double-cancel noop, state machine nhảy/lùi/terminal, Delivered→Payment Paid, order_code retry P2002) |
+| 2 | `order/{controller,routes}` + `jobs/auto-cancel-orders.ts` + mount app.ts + cron server.ts | curl trọn vòng: đặt đơn (kho 50→48, giỏ rỗng, mã BK-...), hủy (kho hoàn 50), admin nhảy bước→400, tiến đúng Pending→...→Delivered (Payment Paid), hủy đơn Delivered→400, user thường /admin→403, xem đơn người khác→404 |
+| 3 | FE `api/orders`, `lib/order-status` (label+màu), `OrderDetailPage`, wire CheckoutPage (COD radio + note + createOrder → invalidate cart + navigate), route `/orders/:code` | Browser: đặt COD → về `/orders/BK-...`, status "Chờ xác nhận", giỏ rỗng; hủy đơn → "Đã hủy", kho hoàn |
+| 4 | `OrdersPage` (lịch sử + phân trang) + Navbar "Đơn hàng của tôi" | Browser: /orders thấy đơn, click ra chi tiết |
+| 5 | `Admin{Orders,OrderDetail}Page` + sidebar "Đơn hàng" + routes | Browser: bảng đơn + filter status + search; tiến trạng thái Xác nhận→Giao→Đã giao (Payment "Paid"), hết nút khi terminal |
+| 6 | Tài liệu: mục này + D41–D45 + CLAUDE.md | — |
+
+### Quyết định mới trong phase (chi tiết: THIET-KE.md mục 10)
+
+- **D41** — order_code `BK-YYYYMMDD-XXXXX` (crypto random, retry P2002).
+- **D42** — state machine tiến 1 bước + quyền user/admin (hủy theo điều kiện).
+- **D43** — COD payment: Pending khi tạo, Paid khi Delivered, Cancelled khi hủy.
+- **D44** — cron auto-hủy Pending >24h (server.ts, guard test/env).
+- **D45** — chống oversell bằng conditional decrement `updateMany.gte` + assert count.
+
+### Khái niệm cần hiểu để bảo vệ
+
+**Transaction & tồn kho (hội đồng chắc chắn hỏi):**
+
+1. **createOrder atomic** — tạo Order + OrderItem + trừ kho + tạo Payment + dọn giỏ nằm TRONG 1 `$transaction`: hoặc tất cả thành công, hoặc rollback sạch. Không có cảnh "đơn tạo rồi mà kho chưa trừ".
+2. **Chống oversell (D45)** — điểm ăn điểm: trừ kho bằng `updateMany({ where: stock >= qty }, decrement)` rồi assert `count===1`. Câu UPDATE gộp kiểm-và-trừ atomic ở DB; 2 đơn mua cuốn cuối song song thì chỉ 1 khớp, đơn kia count=0 → throw → rollback. Đọc-rồi-trừ thì cả 2 đọc stock=1 rồi cùng trừ → âm kho.
+3. **Stock trừ lúc tạo (Pending), hoàn lúc Cancel (D24)** — giữ chỗ hàng cho khách ngay; đơn ma treo mãi thì cron 24h hoàn kho.
+4. **cancelOrder idempotent** — đọc lại đơn đầu transaction, đã Cancelled thì noop. Chống cron + user hủy gần nhau → hoàn kho 2 lần. Dùng chung cho user/admin/cron.
+
+**SNAPSHOT (D25):**
+
+5. **Vì sao snapshot** — OrderItem lưu title/tác giả/giá/bìa TẠI LÚC ĐẶT; Order lưu địa chỉ giao (không FK Address). Sách đổi giá/đổi tên/bị xóa hay user xóa địa chỉ thì lịch sử đơn vẫn đọc đúng. `book_id` nullable + `onDelete SetNull`: xóa sách không vỡ đơn.
+
+**State machine & quyền (D42):**
+
+6. **Tiến đúng 1 bước** — map `ADMIN_NEXT_STATUS`; nhảy/lùi → 400. Few transitions = few bugs.
+7. **Ai hủy được gì** — user chỉ hủy đơn mình khi Pending; admin hủy khi Pending/Confirmed; Shipping/Delivered không hủy. Controller kiểm quyền, service làm atomic.
+8. **COD Paid khi Delivered (D43)** — tiền mặt chỉ thực thu lúc giao thành công → đó là điểm lật Payment Paid.
+
+**Hạ tầng:**
+
+9. **Cron đặt ở server.ts không phải app.ts (D44)** — Jest/Supertest import `app` để test; nếu cron ở app.ts thì test vô tình spawn cron. Tách ra + guard `NODE_ENV=test`.
+10. **order_code retry P2002 (D41)** — bọc cả transaction trong vòng lặp: trùng mã (P2002) → sinh mã mới chạy lại; lỗi khác (oversell 409) ném thẳng, không retry.
+11. **Enum Prisma trong test** — import enum dạng VALUE từ generated client làm Jest fail (không resolve `internal/class.js`). Cách tránh: service/schema dùng string literal ('Pending'...) + import type-only; giống cart dùng 'cod' literal.
+
+### Việc còn treo
+
+- VNPay (Phase 5) — Payment đã tách bảng + có cột `txn_ref/gateway_response` chờ sẵn.
+- Cron mới verify bằng unit test `cancelOrder` + logic; chưa chạy đợi 24h thật (chấp nhận cho đồ án).
+- Email xác nhận đơn (NICE).
+
+---
+
+## Code review vòng 4 — sau Phase 4 (2026-06-13)
+
+> Review tập trung concurrency của Order (phần dễ sai nhất): 3 Critical + 3 Major về race.
+> Đã sửa bằng atomic guard ở tầng DB (KHÔNG đổi isolation, KHÔNG raw SQL) + verify race THẬT
+> trên Postgres bằng `Promise.all` (không chỉ mock). 90/90 unit test xanh.
+
+### Các lỗi đã sửa & bài học
+
+| # | Lỗi | Fix | Bài học cần nhớ |
+|---|---|---|---|
+| 1 | **createOrder chưa atomic với giỏ**: đọc giỏ ngoài transaction → double-click/2 tab có thể tạo 2 đơn từ 1 giỏ | Xóa giỏ trong transaction bằng `deleteMany` theo book_id + **assert `count === số dòng đặt`**: 2 request tranh nhau xóa cùng dòng, chỉ 1 thắng (count khớp), request kia count lệch → throw 409 → rollback cả đơn lẫn trừ kho. Verify thật: `201 + 409` | "1 giỏ → 1 đơn" cần 1 ĐIỂM SERIALIZE ở DB. Dùng chính việc xóa dòng giỏ làm "token tranh chấp" — gọn hơn lock/isolation |
+| 2 | **cancelOrder hoàn kho 2 lần khi hủy song song**: đọc status rồi update theo id, 2 request cùng đọc Pending → cùng hoàn kho | Đổi sang **conditional `updateMany({ where: { id, status }, ... })`** rồi assert `count===1`; chỉ "người thắng" hoàn kho. Verify thật: double-cancel → kho hoàn ĐÚNG 1 lần (delta=1) | Update có ĐIỀU KIỆN trạng thái + check count = compare-and-set atomic ở DB. Đọc-rồi-ghi không bao giờ idempotent dưới race |
+| 3 | **Admin advance có thể "hồi sinh" đơn đã Cancelled**: đọc status rồi update theo id, nếu cron/user hủy xen vào thì vẫn đẩy Cancelled→Confirmed | Forward cũng dùng conditional `updateMany({ where: { id, status: vừa-đọc } })`; status đã đổi → count=0 → 409 "tải lại trang". Không hồi sinh | Mọi transition phải gắn điều kiện "from-status" vào chính câu UPDATE, không validate rời rồi update mù |
+| 4 | **Quyền hủy kiểm ngoài transaction** (user chỉ Pending) | Thêm tham số `cancelOrder(id, allowedFrom[])`: user/cron `['Pending']`, admin `['Pending','Confirmed']` — invariant quyền nằm TRONG transaction, check ngoài chỉ để báo lỗi đẹp | Invariant nghiệp vụ phải enforce ở nơi atomic, không tin check ở controller (có thể stale) |
+| 5 | **createOrder xóa CẢ giỏ** → sách thêm ở tab khác lúc đặt bị mất | `deleteMany` lọc `book_id: { in: orderedBookIds }` — chỉ xóa đúng dòng đã đặt | Xóa có chủ đích theo id, đừng "xóa sạch theo user" khi chỉ muốn bỏ phần liên quan |
+| 6 | **FE type nói quá**: createOrderApi khai `OrderDetail` nhưng BE trả order trần | BE create/cancel/adminUpdate đều `return findUnique(..., include: items+payments)` → đúng `OrderDetail`. Verify: create trả items=2, payments=1 | Type là hợp đồng — để BE trả đúng shape FE khai, đừng để "nói quá sự thật" dù runtime chưa vỡ |
+
+### Ghi nhận nhưng hoãn (đúng D22)
+
+- Integration test tự động cho race (Playwright/supertest nhiều luồng) — đã verify THỦ CÔNG bằng `Promise.all` trên DB thật (double-submit `201+409`, double-cancel hoàn kho 1 lần); tự động hóa là NICE.
+- Cron fake-clock test — logic `cancelOrder(id, ['Pending'])` đã unit-test; gọi hàm job nội bộ để test sâu hơn để sau.
+
+## Code review vòng 5 — siết thêm Order concurrency (2026-06-13)
+
+> Follow-up vòng 4: 2 Major + 3 Minor còn sót về race/an toàn. Đã sửa + verify lại race
+> THẬT trên Postgres (`Promise.all`). 91/91 unit test xanh.
+
+| # | Lỗi | Fix | Bài học |
+|---|---|---|---|
+| 1 | **cancelOrder trả 200 khi claim count=0** dù đơn KHÔNG bị hủy (user bấm hủy đúng lúc admin xác nhận → API báo success nhưng đơn thành Confirmed) | Khi claim count=0, RE-READ: status=Cancelled (request hủy khác thắng) → noop 200 idempotent; status khác (Confirmed...) → **409** "tải lại trang". Verify thật: cancel=409, confirm=200, đơn cuối Confirmed | "Mất race" có 2 nghĩa khác nhau — phải phân biệt "ai đó đã làm hộ việc mình" (noop OK) vs "trạng thái đã đổi nên việc mình bất khả" (báo lỗi) |
+| 2 | **createOrder check giỏ chỉ theo book_id** → tab khác đổi qty/thêm cùng cuốn trong lúc checkout thì thay đổi bị mất | Xóa giỏ theo ĐÚNG (book_id + quantity) đã snapshot; lệch → count thiếu → 409 rollback. Optimistic concurrency: đơn chỉ commit nếu giỏ y nguyên lúc đọc | Khi snapshot dữ liệu rồi mới ghi, điều kiện xóa/cập nhật phải khớp CẢ giá trị đã đọc, không chỉ khóa chính |
+| 3 | (Minor) `cancelOrder` default `allowedFrom` gồm cả Confirmed → caller quên truyền dễ lỡ cho hủy | Đổi default về `['Pending']` — chặt nhất, **fail-closed** | Giá trị mặc định của tham số an toàn nên là cái HẠN CHẾ nhất, không phải tiện nhất |
+| 4 | (Minor) Cron log "auto-hủy thành công" cả khi cancelOrder noop do race | Bỏ log per-đơn; log TỔNG KẾT `{ quet, loi }` sau vòng lặp + chỉ log error khi throw | Đừng log "đã làm X" khi không chắc mình thực sự làm X — log sự kiện quan sát được, không log phỏng đoán |
+| 5 | (Minor) Test mock Prisma chưa chứng minh race thật | Bổ sung verify thủ công `Promise.all` trên DB thật: double-submit `201+409`, double-cancel hoàn kho 1 lần, cancel-vs-confirm `409` | Mock chứng minh LOGIC; race condition phải verify trên DB thật (dù chỉ thủ công) |
+
+---
+
+## Phase 5 — Payment VNPay sandbox (2026-06-14)
+
+### Mục tiêu phase
+
+Thêm VNPay làm phương thức thanh toán online bên cạnh COD → **hoàn tất luồng CORE end-to-end**
+(khách trả tiền online được). Chỉ VNPay (D17). **Không cần migration** — Payment (gateway
+cod|vnpay, txn_ref, gateway_response, paid_at) có sẵn từ Phase 0. Ngoài scope: refund, MoMo, email biên lai.
+
+### Đã làm (6 lát)
+
+| Lát | Nội dung | Kết quả xác minh |
+|---|---|---|
+| 1 | Credentials vào `.env` (gitignore); `lib/vnpay.ts` (buildPaymentUrl + verifyCallback, HMAC-SHA512 bám demo VNPay) | 6 unit test: build→verify khớp, giả mạo amount/txnRef → invalid, thiếu env → throw |
+| 2 | createOrder branch gateway theo payment_method + sinh txn_ref vnpay (`lib/order-code.generateTxnRef`); cron bỏ qua đơn đã Paid (D49) | test: vnpay → Payment gateway vnpay + txn_ref; cron where loại đơn Paid |
+| 3 | Module `payment/` (create + return + ipn + `reconcileVnpayPayment` idempotent); mount; wire order create gắn payment_url | 10 unit test + **verify DB thật**: tạo đơn → payment_url; callback đã ký → Payment Paid; IPN gọi lại → RspCode 02 (idempotent); chữ ký sai → redirect invalid / RspCode 97 |
+| 4 | FE: `api/orders` payment_method union + `startVnpayPaymentApi`; CheckoutPage bật radio VNPay + redirect `window.location` khi có payment_url | browser: chọn VNPay → POST /orders 201 (preview sandbox không đi ra domain ngoài được) |
+| 5 | FE: `PAYMENT_STATUS_META` + OrderDetailPage hiện gateway/badge + nút "Thanh toán VNPay" retry + banner `?payment=` | browser: trang đơn VNPay hiện "Chờ thanh toán" + nút; banner success(xanh)/failed(đỏ) đúng |
+| 6 | Tài liệu: mục này + D46–D49 + CLAUDE.md | — |
+
+### Quyết định mới (chi tiết: THIET-KE.md mục 10)
+
+- **D46** — VNPay tái dùng createOrder; VNPay Paid không đổi Order.status (vẫn Pending chờ admin).
+- **D47** — Cả IPN + Return, chung `reconcileVnpayPayment` idempotent; Return về backend rồi redirect FE.
+- **D48** — txn_ref = order_code bỏ `-` + hậu tố thời gian, mỗi lần thử 1 row Payment mới.
+- **D49** — Cron bỏ qua đơn đã Paid (tránh hủy đơn VNPay đã trả tiền).
+
+### Khái niệm cần hiểu để bảo vệ
+
+**Chữ ký VNPay (nơi dễ sai nhất — hội đồng có thể hỏi):**
+
+1. **HMAC-SHA512 trên querystring đã sort + encode** — bám TUYỆT ĐỐI thuật toán demo VNPay: `sortObject` (sắp key alphabet, `encodeURIComponent` rồi `%20→+`), nối `key=value&...`, ký bằng hash secret. Dùng ĐÚNG chuỗi đó cho cả ký lẫn URL redirect — encode/sort lại lần nữa là sai chữ ký. Khóa thuật toán bằng test build→verify round-trip.
+2. **verifyCallback** — bỏ `vnp_SecureHash` + `vnp_SecureHashType` ra rồi ký lại phần còn lại, so với chữ ký VNPay gửi. Khớp = dữ liệu chưa bị sửa trên đường truyền.
+3. **Vì sao Return về BACKEND không phải FE** — giữ toàn bộ crypto + hash secret ở server; backend verify + cập nhật DB rồi mới redirect FE (FE không bao giờ thấy secret).
+
+**Đối soát & an toàn tiền:**
+
+4. **Server tự đối chiếu amount từ DB** (`vnp_Amount === Payment.amount × 100`) — không tin số tiền VNPay/client gửi. Chỉ Paid khi: chữ ký đúng + amount khớp + `vnp_ResponseCode='00' && vnp_TransactionStatus='00'`.
+5. **Idempotent reconcile** — `updateMany({ where:{ txn_ref, status:'Pending' } })`: Return + IPN đều gọi (có thể gọi lại) nhưng chỉ lật Paid 1 lần. Cùng họ compare-and-set với D45/cancelOrder.
+6. **IPN vs Return** — IPN là server→server (nguồn sự thật, cần URL công khai/ngrok), trả `{RspCode,Message}`; Return là trình duyệt user redirect về (chạy localhost), hiển thị kết quả. Cả hai đối soát chung 1 hàm nên thống nhất.
+7. **payment status ≠ order status (D46)** — VNPay Paid không tự xác nhận đơn; admin vẫn xác nhận thủ công. Cron bỏ qua đơn đã Paid (D49) để không hủy nhầm đơn đã trả tiền.
+8. **Payment tách bảng (D26)** — mỗi lần thử thanh toán = 1 row (txn_ref riêng); thất bại rồi thử lại tạo row mới, giữ được lịch sử mọi lần thử.
+
+### Việc còn treo
+
+- **Luồng VNPay UI thật** (nhập thẻ NCB + OTP trên trang sandbox) verify THỦ CÔNG khi bảo vệ — preview browser bị sandbox không đi ra domain ngoài; chữ ký URL đã được test khóa thuật toán nên VNPay sẽ chấp nhận. Thẻ test: NCB 9704198526191432198 / NGUYEN VAN A / 07/15 / OTP 123456.
+- **IPN thật** cần ngrok/deploy (D18) — localhost dùng Return để demo.
+- Refund khi hủy đơn VNPay đã Paid — NICE, ngoài scope.
+
+### 🛑 CHECKPOINT — CORE end-to-end HOÀN TẤT
+
+7 module CORE chạy thông: Auth → Catalog → Cart → Checkout → Order → Payment (COD + VNPay).
+Khách đặt đơn được, trả tiền COD/VNPay, admin xác nhận → giao. Theo nguyên tắc checkpoint
+(THIET-KE.md mục 8): quyết định nộp (polish) hay tiếp NICE tier.
+
+---
+
+## Code review vòng 6 — siết invariant thanh toán (2026-06-14)
+
+> Review Phase 5: 3 Critical + 4 Major + 2 Minor quanh trạng thái thanh toán. Đã sửa +
+> verify guard trên DB thật. 115/115 unit test xanh.
+
+| # | Lỗi | Fix | Bài học |
+|---|---|---|---|
+| 1 | **COD order gọi được /vnpay/create** → tạo thêm Payment vnpay cho đơn đã có Payment cod → 2 phương thức / nguy cơ 2 lần thu | startVnpayPayment chặn nếu đơn có Payment `gateway:'cod'` → 400. Verify: COD → 400 | 1 đơn = 1 phương thức thanh toán; guard ngay cửa vào, không để 2 gateway lẫn lộn |
+| 2 | **Hủy được đơn VNPay đã Paid** → hoàn kho nhưng tiền đã thu (refund ngoài scope) | cancelOrder thêm include `payments` + chặn `payments.some(Paid)` → 400. Guard TRONG transaction nên user/admin/cron đều không lách. Verify: cancel Paid → 400 | Invariant "đã thu tiền thì không tự hủy" phải ở tầng atomic, áp cho MỌI caller |
+| 3 | **Admin xác nhận/giao đơn VNPay chưa thanh toán** | adminUpdateStatus chặn tiến bước nếu đơn là VNPay (`payments.some(gateway vnpay)`) và chưa Paid → 400. COD không chặn (thu khi giao). Verify: unpaid→400, paid→200 | Đơn trả trước phải Paid mới đi tiếp; đơn trả sau (COD) thì không — guard theo gateway |
+| 4 | **reconcile báo success dù updateMany count=0** (race/đã Cancelled) | Kiểm `upd.count`: nếu 0 → re-read, status Paid → already_paid, khác → failed. Không báo success giả. Test count=0 → failed | "Đã ghi" phải xác nhận bằng count, không giả định update luôn thành công |
+| 5 | **Tạo đơn VNPay rồi mới lỗi env** → order đã tạo, kho đã trừ, giỏ đã dọn | Controller `assertVnpayConfigured()` TRƯỚC createOrder khi payment_method=vnpay → fail sớm, chưa đụng DB | Validate điều kiện ngoại vi (env/config) trước khi bắt đầu side-effect không hoàn tác |
+| 6 | **2 retry VNPay song song → 2 Payment Pending** | Tạo Payment retry trong `$transaction` + `SELECT ... FOR UPDATE` khóa dòng Order → request sau nối đuôi, thấy Pending vừa tạo → tái dùng. Đúng 1 Pending/đơn | Pessimistic lock (FOR UPDATE) trên "tài nguyên cha" serialize việc tạo con khi không có unique index phù hợp |
+| 7 | **Cron `void fn()` không catch** → unhandled rejection nếu findMany lỗi | `fn().catch(logger.error)` ngoài vòng lặp | Promise chạy nền phải luôn có `.catch`, nếu không 1 lỗi DB làm sập tiến trình |
+| 8 | (Minor) Admin detail hiện `payments[0]` (cũ) | Hiện `payments[last]` (lần thử mới nhất) + PAYMENT_STATUS_META | Khi có nhiều bản ghi attempt, luôn hiển thị bản mới nhất |
+| 9 | (Minor) So chữ ký bằng `===` | `crypto.timingSafeEqual` (độ dài + nội dung) | So sánh HMAC nên timing-safe, tránh rò rỉ qua thời gian |
+
+---
+
+*(Phase 6+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*

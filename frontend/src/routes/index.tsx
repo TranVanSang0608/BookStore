@@ -7,6 +7,8 @@ import AdminAuthorsPage from '../pages/admin/AdminAuthorsPage'
 import AdminBookFormPage from '../pages/admin/AdminBookFormPage'
 import AdminBooksPage from '../pages/admin/AdminBooksPage'
 import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage'
+import AdminOrderDetailPage from '../pages/admin/AdminOrderDetailPage'
+import AdminOrdersPage from '../pages/admin/AdminOrdersPage'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import AuthorPage from '../pages/books/AuthorPage'
@@ -14,6 +16,8 @@ import BookDetailPage from '../pages/books/BookDetailPage'
 import BookListPage from '../pages/books/BookListPage'
 import CartPage from '../pages/cart/CartPage'
 import CheckoutPage from '../pages/checkout/CheckoutPage'
+import OrderDetailPage from '../pages/orders/OrderDetailPage'
+import OrdersPage from '../pages/orders/OrdersPage'
 import HomePage from '../pages/home/HomePage'
 import ProfilePage from '../pages/profile/ProfilePage'
 
@@ -48,6 +52,23 @@ export default function AppRoutes() {
             </RequireAuth>
           }
         />
+        {/* Lịch sử đơn + chi tiết của user — getOrderByCode chặn xem đơn người khác (404) */}
+        <Route
+          path="/orders"
+          element={
+            <RequireAuth>
+              <OrdersPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/orders/:code"
+          element={
+            <RequireAuth>
+              <OrderDetailPage />
+            </RequireAuth>
+          }
+        />
 
         {/* Khu quản trị: route lồng nhau — AdminLayout render sidebar,
             trang con hiện vào <Outlet/>. RequireAdmin chặn user thường. */}
@@ -59,7 +80,9 @@ export default function AppRoutes() {
             </RequireAdmin>
           }
         >
-          <Route index element={<Navigate to="/admin/books" replace />} />
+          <Route index element={<Navigate to="/admin/orders" replace />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="orders/:id" element={<AdminOrderDetailPage />} />
           <Route path="books" element={<AdminBooksPage />} />
           <Route path="books/new" element={<AdminBookFormPage />} />
           <Route path="books/:id/edit" element={<AdminBookFormPage />} />

@@ -46,6 +46,9 @@ export default function Navbar() {
                 </li>
               )}
               <li>
+                <Link to="/orders">Đơn hàng của tôi</Link>
+              </li>
+              <li>
                 <Link to="/profile">Tài khoản của tôi</Link>
               </li>
               <li>

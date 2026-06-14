@@ -1,17 +1,22 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { fetchAddresses } from '../../api/addresses'
 import { fetchCart } from '../../api/cart'
+import { getApiErrorMessage } from '../../api/client'
+import { createOrderApi } from '../../api/orders'
 import { fetchShippingFee } from '../../api/shipping'
 import { formatPrice } from '../../lib/format'
 
-// Trang checkout (Phase 3): chọn địa chỉ → xem phí ship theo zone + tổng tiền.
-// Nút "Đặt hàng" thật (transaction tạo Order) thuộc Phase 4 — hiện disabled có ghi chú.
+// Trang checkout: chọn địa chỉ → xem phí ship theo zone + tổng tiền → đặt đơn (COD).
 // Route này nằm trong RequireAuth (checkout bắt buộc đăng nhập — D2).
 export default function CheckoutPage() {
   // pickedId = địa chỉ user CHỦ ĐỘNG bấm chọn; null = chưa bấm gì
   const [pickedId, setPickedId] = useState<number | null>(null)
+  const [note, setNote] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'vnpay'>('cod')
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { data: cart, isPending: cartPending } = useQuery({
     queryKey: ['cart'],
@@ -42,6 +47,22 @@ export default function CheckoutPage() {
     queryKey: ['shipping-fee', selected?.province_code, subtotal],
     queryFn: () => fetchShippingFee(selected!.province_code, subtotal),
     enabled: selected !== undefined && subtotal > 0,
+  })
+
+  // Đặt đơn: BE tự tính lại tiền + trừ kho trong transaction (FE chỉ gửi address + note + phương thức).
+  // Thành công → dọn cache giỏ (BE đã xóa giỏ); VNPay thì redirect sang cổng, COD thì sang chi tiết đơn.
+  const orderMutation = useMutation({
+    mutationFn: () =>
+      createOrderApi({ address_id: selected!.id, note: note.trim() || undefined, payment_method: paymentMethod }),
+    onSuccess: (order) => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] })
+      if (order.payment_url) {
+        // VNPay: rời SPA sang trang thanh toán VNPay (full page redirect, không dùng router)
+        window.location.href = order.payment_url
+      } else {
+        navigate(`/orders/${order.order_code}`)
+      }
+    },
   })
 
   if (cartPending || addressesPending) {
@@ -175,13 +196,55 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Phase 4 sẽ thay disabled bằng mutation tạo Order (transaction trừ stock) */}
-            <button className="btn btn-primary w-full" disabled>
-              Đặt hàng
+            {/* Hình thức thanh toán: COD hoặc VNPay */}
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Hình thức thanh toán</p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="payment"
+                  className="radio radio-sm radio-primary"
+                  checked={paymentMethod === 'cod'}
+                  onChange={() => setPaymentMethod('cod')}
+                />
+                <span className="text-sm">Thanh toán khi nhận hàng (COD)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="payment"
+                  className="radio radio-sm radio-primary"
+                  checked={paymentMethod === 'vnpay'}
+                  onChange={() => setPaymentMethod('vnpay')}
+                />
+                <span className="text-sm">Thanh toán online qua VNPay</span>
+              </label>
+            </div>
+
+            <label className="form-control">
+              <span className="label-text mb-1">Ghi chú (không bắt buộc)</span>
+              <textarea
+                className="textarea textarea-bordered w-full"
+                rows={2}
+                placeholder="Ví dụ: giao giờ hành chính"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+
+            {orderMutation.isError && (
+              <div className="alert alert-error text-sm">{getApiErrorMessage(orderMutation.error)}</div>
+            )}
+
+            {/* Chặn đặt khi: giỏ có vấn đề, chưa chọn địa chỉ, phí ship chưa tính xong, hoặc đang gửi */}
+            <button
+              className="btn btn-primary w-full"
+              disabled={hasProblem || !selected || !fee || orderMutation.isPending}
+              onClick={() => orderMutation.mutate()}
+            >
+              {orderMutation.isPending && <span className="loading loading-spinner loading-sm" />}
+              {paymentMethod === 'vnpay' ? 'Đặt hàng & thanh toán VNPay' : 'Đặt hàng'}
             </button>
-            <p className="text-xs text-center text-base-content/50">
-              Chức năng đặt hàng sẽ hoàn thiện ở Phase 4
-            </p>
           </div>
         </div>
       </div>
