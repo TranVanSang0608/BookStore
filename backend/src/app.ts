@@ -9,6 +9,8 @@ import authorRoutes from './modules/catalog/author.routes';
 import bookRoutes from './modules/catalog/book.routes';
 import categoryRoutes from './modules/catalog/category.routes';
 import cartRoutes from './modules/cart/routes';
+import orderRoutes from './modules/order/routes';
+import paymentRoutes from './modules/payment/routes';
 import healthRoutes from './modules/health/routes';
 import locationsRoutes from './modules/locations/routes';
 import shippingRoutes from './modules/shipping/routes';
@@ -45,6 +47,10 @@ app.use('/api/uploads', uploadRoutes);
 // Cart + Shipping (Phase 3): giỏ hàng DB của user đã đăng nhập + tính phí ship theo zone
 app.use('/api/cart', cartRoutes);
 app.use('/api/shipping', shippingRoutes);
+// Order (Phase 4): đặt/hủy đơn (transaction) + admin quản lý đơn
+app.use('/api/orders', orderRoutes);
+// Payment (Phase 5): khởi tạo + callback (return/ipn) VNPay
+app.use('/api/payments', paymentRoutes);
 
 // Error handler PHẢI đăng ký sau cùng để hứng lỗi từ mọi route phía trên
 app.use(errorHandler);
