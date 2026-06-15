@@ -16,6 +16,7 @@ import locationsRoutes from './modules/locations/routes';
 import shippingRoutes from './modules/shipping/routes';
 import uploadRoutes from './modules/upload/routes';
 import userRoutes from './modules/user/routes';
+import voucherRoutes from './modules/voucher/routes';
 
 // Cấu hình Express app — tách riêng khỏi server.ts để sau này
 // Jest/Supertest có thể import app test trực tiếp mà không cần mở port.
@@ -51,6 +52,8 @@ app.use('/api/shipping', shippingRoutes);
 app.use('/api/orders', orderRoutes);
 // Payment (Phase 5): khởi tạo + callback (return/ipn) VNPay
 app.use('/api/payments', paymentRoutes);
+// Voucher (Phase 7): preview mã giảm giá (checkout) + admin CRUD
+app.use('/api/vouchers', voucherRoutes);
 
 // Error handler PHẢI đăng ký sau cùng để hứng lỗi từ mọi route phía trên
 app.use(errorHandler);

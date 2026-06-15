@@ -9,6 +9,7 @@ import {
   createOrder,
 } from '../modules/order/service';
 import { calcShippingFee } from '../modules/shipping/service';
+import { validateVoucher } from '../modules/voucher/service';
 
 jest.mock('../lib/prisma', () => ({
   prisma: {
@@ -18,6 +19,8 @@ jest.mock('../lib/prisma', () => ({
     book: { updateMany: jest.fn(), update: jest.fn() },
     payment: { create: jest.fn(), updateMany: jest.fn() },
     cartItem: { deleteMany: jest.fn() },
+    voucher: { updateMany: jest.fn(), update: jest.fn() },
+    voucherUsage: { create: jest.fn(), deleteMany: jest.fn(), count: jest.fn() },
     // $transaction callback: gọi callback với chính prisma mock (đóng vai tx)
     $transaction: jest.fn(async (arg: unknown) =>
       typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(prisma) : Promise.all(arg as Promise<unknown>[]),
@@ -25,9 +28,10 @@ jest.mock('../lib/prisma', () => ({
   },
 }));
 
-// Mock cart + shipping service để cô lập logic order
+// Mock cart + shipping + voucher service để cô lập logic order
 jest.mock('../modules/cart/service', () => ({ getCart: jest.fn() }));
 jest.mock('../modules/shipping/service', () => ({ calcShippingFee: jest.fn() }));
+jest.mock('../modules/voucher/service', () => ({ validateVoucher: jest.fn() }));
 
 const mockGetCart = getCart as jest.Mock;
 const mockCalcShip = calcShippingFee as jest.Mock;
@@ -42,6 +46,12 @@ const mockPaymentCreate = prisma.payment.create as jest.Mock;
 const mockPaymentUpdateMany = prisma.payment.updateMany as jest.Mock;
 const mockCartDeleteMany = prisma.cartItem.deleteMany as jest.Mock;
 const mock$transaction = prisma.$transaction as jest.Mock;
+const mockValidateVoucher = validateVoucher as jest.Mock;
+const mockVoucherUpdateMany = prisma.voucher.updateMany as jest.Mock;
+const mockVoucherUpdate = prisma.voucher.update as jest.Mock;
+const mockVoucherUsageCreate = prisma.voucherUsage.create as jest.Mock;
+const mockVoucherUsageDeleteMany = prisma.voucherUsage.deleteMany as jest.Mock;
+const mockVoucherUsageCount = prisma.voucherUsage.count as jest.Mock;
 
 // Sách mẫu trong giỏ: 2 cuốn "Mắt Biếc" giá 100k, còn 5 cuốn
 function cartWith(overrides: Partial<{ quantity: number; is_active: boolean; stock: number; price: number }> = {}) {
@@ -88,6 +98,12 @@ beforeEach(() => {
   // Re-read cuối transaction (createOrder/cancel/admin đều trả chi tiết đầy đủ)
   mockOrderFindUnique.mockResolvedValue({ id: 100, order_code: 'BK-X', items: [], payments: [] });
   mockOrderUpdateMany.mockResolvedValue({ count: 1 }); // claim đổi trạng thái thành công
+  // Voucher (Phase 7): mặc định giữ lượt thành công
+  mockVoucherUpdateMany.mockResolvedValue({ count: 1 });
+  mockVoucherUpdate.mockResolvedValue({});
+  mockVoucherUsageCreate.mockResolvedValue({ id: 1 });
+  mockVoucherUsageDeleteMany.mockResolvedValue({ count: 1 });
+  mockVoucherUsageCount.mockResolvedValue(0); // user chưa dùng mã (per_user_limit còn chỗ)
 });
 
 describe('createOrder — tạo đơn + transaction', () => {
@@ -316,6 +332,120 @@ describe('cancelOrder — hủy + hoàn kho (claim atomic)', () => {
     mockOrderFindUnique.mockResolvedValue({ id: 100, status: 'Shipping', items: [], payments: [] });
 
     await expect(cancelOrder(100)).rejects.toMatchObject({ statusCode: 400 });
+  });
+});
+
+describe('voucher (Phase 7) — áp khi tạo đơn, hoàn khi hủy', () => {
+  const baseInput = { address_id: 7, payment_method: 'cod' as const };
+
+  function setupCart() {
+    mockGetCart.mockResolvedValue(cartWith()); // subtotal 200k
+    mockAddressFindFirst.mockResolvedValue(diaChi);
+    mockCalcShip.mockResolvedValue({ shipping_fee: 20000 });
+  }
+
+  it('áp voucher: trừ discount vào total, snapshot code/id, giữ lượt + log VoucherUsage', async () => {
+    setupCart();
+    mockValidateVoucher.mockResolvedValue({
+      voucher: { id: 3, code: 'SALE20K', usage_limit: 100, per_user_limit: 5 },
+      discount: 20000,
+    });
+
+    await createOrder(1, { ...baseInput, voucher_code: 'SALE20K' });
+
+    const orderData = mockOrderCreate.mock.calls[0][0].data;
+    expect(orderData).toMatchObject({
+      subtotal: 200000,
+      shipping_fee: 20000,
+      discount_amount: 20000,
+      total: 200000, // 200k + 20k ship - 20k giảm
+      voucher_code: 'SALE20K',
+      voucher_id: 3,
+    });
+    // Giữ lượt ATOMIC: updateMany có điều kiện used_count < usage_limit
+    expect(mockVoucherUpdateMany.mock.calls[0][0]).toMatchObject({
+      where: { id: 3, used_count: { lt: 100 } },
+      data: { used_count: { increment: 1 } },
+    });
+    expect(mockVoucherUsageCreate.mock.calls[0][0].data).toMatchObject({
+      voucher_id: 3,
+      user_id: 1,
+      order_id: 100,
+    });
+  });
+
+  it('usage_limit null → tăng used_count KHÔNG điều kiện', async () => {
+    setupCart();
+    mockValidateVoucher.mockResolvedValue({ voucher: { id: 3, code: 'X', usage_limit: null }, discount: 10000 });
+
+    await createOrder(1, { ...baseInput, voucher_code: 'X' });
+
+    expect(mockVoucherUpdateMany.mock.calls[0][0].where).toEqual({ id: 3 });
+  });
+
+  it('voucher vừa hết lượt (compare-and-set count=0) → 409 rollback', async () => {
+    setupCart();
+    mockValidateVoucher.mockResolvedValue({ voucher: { id: 3, code: 'X', usage_limit: 1, per_user_limit: 1 }, discount: 10000 });
+    mockVoucherUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(createOrder(1, { ...baseInput, voucher_code: 'X' })).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it('per_user_limit dưới race: đếm usage TRONG tx >= limit → 409 (chống double-submit dùng mã 1 lần/user)', async () => {
+    setupCart();
+    // usage_limit null (lượt tổng không giới hạn) để cô lập đúng nhánh per-user; row lock của
+    // updateMany used_count serialize → request sau đếm thấy usage của request thắng
+    mockValidateVoucher.mockResolvedValue({
+      voucher: { id: 3, code: 'X', usage_limit: null, per_user_limit: 1 },
+      discount: 10000,
+    });
+    mockVoucherUsageCount.mockResolvedValue(1); // request thắng đã ghi 1 usage cho user này
+
+    await expect(createOrder(1, { ...baseInput, voucher_code: 'X' })).rejects.toMatchObject({ statusCode: 409 });
+    expect(mockVoucherUsageCreate).not.toHaveBeenCalled(); // không ghi usage thứ 2
+  });
+
+  it('không nhập mã → KHÔNG đụng bảng voucher, total không trừ', async () => {
+    setupCart();
+
+    await createOrder(1, baseInput);
+
+    expect(mockValidateVoucher).not.toHaveBeenCalled();
+    expect(mockVoucherUpdateMany).not.toHaveBeenCalled();
+    expect(mockOrderCreate.mock.calls[0][0].data).toMatchObject({ discount_amount: 0, voucher_id: null });
+  });
+
+  it('hủy đơn CÓ voucher → hoàn used_count + xóa VoucherUsage', async () => {
+    mockOrderFindUnique.mockResolvedValue({
+      id: 100,
+      status: 'Pending',
+      voucher_id: 3,
+      items: [{ book_id: 10, quantity: 2 }],
+      payments: [],
+    });
+
+    await cancelOrder(100);
+
+    expect(mockVoucherUpdateMany).toHaveBeenCalledWith({
+      where: { id: 3, used_count: { gt: 0 } },
+      data: { used_count: { decrement: 1 } },
+    });
+    expect(mockVoucherUsageDeleteMany).toHaveBeenCalledWith({ where: { order_id: 100 } });
+  });
+
+  it('hủy đơn KHÔNG voucher (voucher_id null) → KHÔNG đụng bảng voucher', async () => {
+    mockOrderFindUnique.mockResolvedValue({
+      id: 100,
+      status: 'Pending',
+      voucher_id: null,
+      items: [{ book_id: 10, quantity: 2 }],
+      payments: [],
+    });
+
+    await cancelOrder(100);
+
+    expect(mockVoucherUpdateMany).not.toHaveBeenCalled();
+    expect(mockVoucherUsageDeleteMany).not.toHaveBeenCalled();
   });
 });
 

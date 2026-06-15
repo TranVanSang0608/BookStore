@@ -77,6 +77,7 @@ export interface CreateOrderInput {
   address_id: number
   note?: string
   payment_method: 'cod' | 'vnpay'
+  voucher_code?: string // Phase 7 — mã giảm giá (không bắt buộc)
 }
 
 // Đơn VNPay trả thêm payment_url để FE redirect sang cổng thanh toán

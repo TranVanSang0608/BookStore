@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middleware/error';
 import { getCart } from '../cart/service';
 import { calcShippingFee } from '../shipping/service';
+import { validateVoucher } from '../voucher/service';
 import type { CreateOrderInput, ListOrdersQuery } from './schemas';
 
 // ---------- State machine (D42) ----------
@@ -51,7 +52,15 @@ export async function createOrder(userId: number, input: CreateOrderInput) {
   // Tiền tính HOÀN TOÀN ở server (D40): subtotal từ giá DB, ship từ calcShippingFee — không tin client
   const subtotal = cart.items.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
   const { shipping_fee } = await calcShippingFee(address.province_code, subtotal);
-  const total = subtotal + shipping_fee;
+
+  // Voucher (Phase 7): validate NGOÀI transaction để báo lỗi thân thiện (mã sai/hết hạn/đơn
+  // tối thiểu...). discount tính từ subtotal SERVER, KHÔNG tin client. Việc "giữ lượt" atomic
+  // làm Ở TRONG transaction (compare-and-set used_count). total = subtotal + ship - discount.
+  const voucherResult = input.voucher_code
+    ? await validateVoucher({ code: input.voucher_code, userId, subtotal })
+    : null;
+  const discount = voucherResult?.discount ?? 0;
+  const total = subtotal + shipping_fee - discount;
 
   // --- Retry quanh CẢ transaction: trùng mã đơn (P2002) → sinh mã mới, chạy lại.
   // Lỗi khác (vd oversell 409) KHÔNG retry — ném ra ngoài luôn. ---
@@ -67,8 +76,13 @@ export async function createOrder(userId: number, input: CreateOrderInput) {
             user_id: userId,
             subtotal,
             shipping_fee,
+            discount_amount: discount,
             total,
             note: input.note,
+            // Snapshot voucher: code + discount_amount (đọc đơn cũ không phụ thuộc bảng Voucher);
+            // voucher_id chỉ để analytics + để hủy đơn biết hoàn lượt cho mã nào (D54)
+            voucher_code: voucherResult?.voucher.code ?? null,
+            voucher_id: voucherResult?.voucher.id ?? null,
             shipping_recipient_name: address.recipient_name,
             shipping_phone: address.phone,
             shipping_province_name: address.province_name,
@@ -102,6 +116,36 @@ export async function createOrder(userId: number, input: CreateOrderInput) {
           if (result.count !== 1) {
             throw new AppError(409, `Sách "${item.book.title}" vừa hết hàng, vui lòng thử lại`);
           }
+        }
+
+        // 3.5 Voucher (Phase 7): GIỮ LƯỢT atomic giống trừ kho (D45). Tăng used_count bằng
+        //     updateMany có điều kiện used_count < usage_limit rồi assert count===1: 2 đơn giành
+        //     lượt cuối song song thì chỉ 1 thắng, đơn kia count=0 → 409 → rollback. Log VoucherUsage.
+        if (voucherResult) {
+          const v = voucherResult.voucher;
+          const claim = await tx.voucher.updateMany({
+            where: v.usage_limit === null ? { id: v.id } : { id: v.id, used_count: { lt: v.usage_limit } },
+            data: { used_count: { increment: 1 } },
+          });
+          if (claim.count !== 1) {
+            throw new AppError(409, 'Mã giảm giá vừa hết lượt, vui lòng thử lại');
+          }
+
+          // per_user_limit RACE-SAFE: câu updateMany ở trên đã GIỮ KHÓA DÒNG voucher (row lock
+          // tới hết transaction) → 2 đơn cùng user song song bị SERIALIZE tại đây. Đếm lại usage
+          // NGAY TRONG tx (sau khi đã giữ khóa) thấy được lần dùng đã commit của request thắng →
+          // request sau vượt per_user_limit thì 409 rollback. Bịt lỗ "double-submit dùng mã 1
+          // lần/user hai lần" (validateVoucher ngoài tx chỉ để báo lỗi đẹp sớm, không đủ chống race).
+          const userUsed = await tx.voucherUsage.count({
+            where: { voucher_id: v.id, user_id: userId },
+          });
+          if (userUsed >= v.per_user_limit) {
+            throw new AppError(409, 'Bạn đã dùng mã này rồi');
+          }
+
+          await tx.voucherUsage.create({
+            data: { voucher_id: v.id, user_id: userId, order_id: order.id },
+          });
         }
 
         // 4. Tạo Payment trạng thái Pending theo phương thức đã chọn:
@@ -204,6 +248,18 @@ export async function cancelOrder(orderId: number, allowedFrom: OrderStatus[] = 
       where: { order_id: orderId, status: 'Pending' },
       data: { status: 'Cancelled' },
     });
+
+    // Hoàn voucher nếu đơn có dùng (Phase 7): trả lại 1 lượt + xóa VoucherUsage của đơn này.
+    // Chỉ "người thắng" compare-and-set ở trên chạy tới đây → idempotent, không hoàn 2 lần.
+    if (order.voucher_id) {
+      // Guard used_count > 0 (kẹp sàn phòng thủ — luồng bình thường không bao giờ xuống âm,
+      // nhưng updateMany có điều kiện thì dù sao cũng không bao giờ ghi số âm)
+      await tx.voucher.updateMany({
+        where: { id: order.voucher_id, used_count: { gt: 0 } },
+        data: { used_count: { decrement: 1 } },
+      });
+      await tx.voucherUsage.deleteMany({ where: { order_id: orderId } });
+    }
 
     return tx.order.findUnique({ where: { id: orderId }, include: orderDetailInclude });
   });

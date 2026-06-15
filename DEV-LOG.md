@@ -607,4 +607,99 @@ VNPay không còn tự hết hạn sau 15 phút; đơn vẫn được cron hủy
 
 ---
 
-*(Phase 7+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*
+## Phase 7 — Voucher + VoucherUsage (NICE tier) (2026-06-15)
+
+### Mục tiêu phase
+
+Mã giảm giá: user nhập mã khi checkout để bớt tiền, admin quản lý mã. 2 loại giảm
+(% có trần + số tiền cố định) trên subtotal; mỗi user dùng 1 mã tối đa N lần (bảng
+`VoucherUsage`). 1 migration (Voucher + VoucherUsage + `Order.voucher_id`). Ngoài scope:
+free-ship voucher, cộng dồn nhiều mã.
+
+### Đã làm (6 lát)
+
+| Lát | Nội dung | Kết quả xác minh |
+|---|---|---|
+| 1 | Migration Voucher+VoucherUsage+`Order.voucher_id`; `lib/voucher.ts` `calcDiscount` thuần; seed 2 mã (WELCOME10, SALE20K) | 5 unit test calcDiscount; seed idempotent |
+| 2 | `modules/voucher` `validateVoucher` (đủ luật) + `POST /vouchers/preview` (auth, subtotal từ giỏ DB) | 8 unit test từng nhánh từ chối; **curl thật**: WELCOME10→giảm 22k, SALE20K→20k, mã rác→400 |
+| 3 | Tích hợp `createOrder` (trừ discount, snapshot code/id, compare-and-set used_count, log VoucherUsage) + `cancelOrder` (hoàn) | 6 unit test (áp mã, hết lượt 409 rollback, hủy hoàn lượt) |
+| 4 | Admin CRUD voucher (list/create/update/toggle/delete) | 6 unit test (chuẩn hóa code, trùng 409, chặn xóa khi có đơn) |
+| 5 | FE: ô mã + preview ở Checkout (dòng giảm + cập nhật tổng) + AdminVouchersPage + sidebar + route | **browser**: admin page hiện 2 mã đúng; áp WELCOME10 → "Giảm giá -22.000đ", tổng 240k→218k |
+| 6 | Tài liệu: mục này + D54–D56 + THUAT-NGU + CLAUDE.md + cổng hiểu | 177 unit test BE xanh; build+lint FE xanh |
+
+### Quyết định mới (chi tiết: THIET-KE.md mục 10)
+
+- **D54** — 2 loại giảm (% trần + cố định) trừ vào subtotal; SNAPSHOT `voucher_code`+`discount_amount`, `voucher_id` chỉ để analytics/hoàn lượt. 1 mã/đơn.
+- **D55** — `used_count` tăng/hoàn ATOMIC bằng compare-and-set (cùng họ trừ kho D45); per_user_limit đếm VoucherUsage.
+- **D56** — `validateVoucher` dùng chung preview + createOrder; server tự lấy subtotal (D40); chặn xóa voucher đã có đơn (tắt thay vì xóa, như D36).
+
+### Khái niệm cần hiểu để bảo vệ
+
+**Tính tiền & SNAPSHOT (D54):**
+
+1. **Công thức total** — `total = subtotal − discount + shipping_fee`. `calcDiscount` THUẦN: %
+   thì `floor(subtotal×value/100)` chặn trần `max_discount`; cố định thì đúng value; LUÔN clamp
+   `≤ subtotal` (không giảm quá tiền hàng). Nguồn sự thật duy nhất cho cả preview lẫn đặt đơn.
+2. **Snapshot voucher** — Order lưu `voucher_code` (text) + `discount_amount` (số đã giảm). Xóa/sửa
+   voucher sau này thì đơn cũ vẫn đọc đúng. `voucher_id` FK chỉ để phân tích + để hủy đơn biết
+   hoàn lượt cho mã nào — KHÔNG đọc lại giá trị giảm từ đó (cùng tinh thần OrderItem snapshot — D25).
+
+**Server tự tính, không tin client (D40/D56):**
+
+3. **Preview chỉ để hiển thị** — `POST /vouchers/preview` tự lấy subtotal từ GIỎ DB (không nhận số
+   tiền client gửi), validate + trả discount. FE hiện dòng "Giảm giá". Nhưng số này KHÔNG được tin:
+   `createOrder` **validate lại + tính lại** discount trong transaction. Sửa JS đổi discount ở FE
+   vô dụng — đơn chốt theo server.
+4. **Thứ tự kiểm trong `validateVoucher`** — tồn tại → đang bật → chưa hết hạn → đạt min_order →
+   còn lượt tổng → user chưa vượt per_user_limit. Mỗi luật 1 message tiếng Việt. Gộp "không tồn tại"
+   và "đã tắt" thành 1 message để không lộ mã nào có thật.
+
+**Concurrency (D55 — hội đồng có thể hỏi "2 người giành mã cuối"):**
+
+5. **used_count compare-and-set** — tăng lượt bằng `updateMany({ where:{ id, used_count:{ lt:
+   usage_limit } }, data:{ increment } })` rồi assert `count===1`, NẰM TRONG transaction createOrder.
+   2 đơn giành lượt cuối song song → chỉ 1 câu update khớp (count=1), đơn kia count=0 → 409 → rollback
+   cả đơn lẫn trừ kho. Y hệt bài học trừ kho D45 / hủy đơn / reconcile VNPay.
+6. **Hủy đơn hoàn lượt** — đơn có `voucher_id` → giảm `used_count` + xóa VoucherUsage của đơn, chỉ
+   "người thắng" compare-and-set hủy chạy tới (idempotent, không hoàn 2 lần — như hoàn kho).
+7. **per_user_limit RACE-SAFE (sửa ở review vòng 8)** — `validateVoucher` đếm VoucherUsage ngoài tx
+   chỉ để báo lỗi đẹp SỚM. Chống race thật nằm TRONG tx: câu `updateMany` tăng `used_count` GIỮ KHÓA
+   DÒNG voucher (row lock tới hết tx) → 2 đơn cùng user song song bị serialize; đếm lại VoucherUsage
+   NGAY SAU (trong tx, đã giữ khóa) thấy được lần dùng đã commit của request thắng → request sau vượt
+   per_user_limit thì 409 rollback. Đúng cho cả `per_user_limit=1` (vd WELCOME10) lẫn >1. Cùng họ
+   pessimistic-lock FOR UPDATE đã dùng ở Phase 5 (retry VNPay) — chỉ khác là tái dùng luôn khóa của
+   chính câu updateMany thay vì SELECT FOR UPDATE riêng.
+
+**Admin (D56):**
+
+8. **Chặn xóa voucher đã có đơn** — `deleteVoucher` đếm Order theo voucher_id, >0 thì 400 "tắt thay
+   vì xóa" (giữ liên kết phân tích). Cùng tinh thần chặn xóa Author còn sách (D36). Mã hết dùng thì
+   `toggle` is_active=false. Code chuẩn hóa UPPERCASE, trùng → 409.
+
+### Việc còn treo
+
+- Voucher chỉ giảm subtotal — free-ship voucher + cộng dồn nhiều mã là NICE ngoài scope.
+- (MI1) FE chưa re-preview khi giỏ đổi giữa chừng: dòng "Giảm giá"/tổng có thể lệch nếu React Query
+  refetch cart lúc focus tab (chỉ sai HIỂN THỊ — BE vẫn validate + tính lại lúc đặt). Checkout giỏ
+  gần như cố định nên rủi ro thấp; để Phase polish.
+
+## Code review vòng 8 — sau Phase 7 (2026-06-15)
+
+> Review code voucher: 0 Critical, 1 Major + 4 Minor. Sửa MA1 (per_user_limit race) + MI2/MI3/MI4
+> + thêm 5 unit test. 182/182 test xanh. MI1 hoãn (chỉ sai hiển thị).
+
+| # | Lỗi | Fix | Bài học |
+|---|---|---|---|
+| MA1 | **per_user_limit KHÔNG an toàn dưới race** — dính cả `=1` (vd WELCOME10): 2 request cùng user song song đều qua `validateVoucher` (ngoài tx, userUsed=0) → dùng mã vượt giới hạn | Đếm lại VoucherUsage NGAY TRONG tx, SAU câu `updateMany` tăng used_count (câu này giữ khóa dòng voucher → serialize 2 đơn cùng user); vượt limit → 409 rollback | Check per-user phải ở NƠI GIỮ KHÓA (trong tx, sau khi lock hàng cha) mới chống race; đếm ngoài tx chỉ để báo lỗi đẹp. Tận dụng luôn khóa của updateMany sẵn có thay vì SELECT FOR UPDATE riêng |
+| MI2 | **expire_at lệch múi giờ** — `new Date('YYYY-MM-DD')` = nửa đêm UTC → mã chết lúc 7h sáng VN (đầu ngày), sớm gần 1 ngày | FE build payload `new Date(`${date}T23:59:59`)` = CUỐI ngày theo giờ local | Date trơn 'YYYY-MM-DD' bị parse theo UTC; muốn "hết ngày X giờ địa phương" phải gắn giờ cuối ngày + để JS parse local |
+| MI3 | **used_count decrement thiếu chặn sàn** | Đổi `update` → `updateMany({ where:{ id, used_count:{ gt:0 } } })` — không bao giờ ghi số âm dù invariant lỗi | Phép trừ trên cột đếm nên có guard sàn, phòng thủ rẻ |
+| MI4 | Typo comment "Voucker" | "Voucher" | — |
+
+### Test bổ sung (5)
+- order.service: per_user_limit race (đếm trong tx >= limit → 409, không ghi usage thứ 2); cancel dùng updateMany guarded.
+- voucher.service: `usage_limit=null` (không giới hạn tổng) vẫn qua; `previewVoucher` giỏ rỗng → 400 + trả đúng shape.
+- voucher admin: `getVoucher` 404.
+
+---
+
+*(Phase 8+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*

@@ -11,6 +11,8 @@ export const createOrderSchema = z.object({
   address_id: z.number().int().positive('Vui lòng chọn địa chỉ giao hàng'),
   note: z.string().max(500, 'Ghi chú tối đa 500 ký tự').optional(),
   payment_method: z.enum(['cod', 'vnpay']).default('cod'),
+  // Voucher (Phase 7) — mã giảm giá không bắt buộc; server tự validate + tính discount
+  voucher_code: z.string().trim().min(1).max(50).optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

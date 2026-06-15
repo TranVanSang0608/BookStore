@@ -6,6 +6,7 @@ import { fetchCart } from '../../api/cart'
 import { getApiErrorMessage } from '../../api/client'
 import { createOrderApi } from '../../api/orders'
 import { fetchShippingFee } from '../../api/shipping'
+import { previewVoucherApi, type VoucherPreview } from '../../api/vouchers'
 import { formatPrice } from '../../lib/format'
 
 // Trang checkout: chọn địa chỉ → xem phí ship theo zone + tổng tiền → đặt đơn (COD).
@@ -15,6 +16,9 @@ export default function CheckoutPage() {
   const [pickedId, setPickedId] = useState<number | null>(null)
   const [note, setNote] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'vnpay'>('cod')
+  // Voucher (Phase 7): ô nhập + mã đã áp (preview từ server). null = chưa áp mã nào.
+  const [voucherCode, setVoucherCode] = useState('')
+  const [applied, setApplied] = useState<VoucherPreview | null>(null)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -37,6 +41,7 @@ export default function CheckoutPage() {
     addresses?.[0]
 
   const subtotal = cart?.subtotal ?? 0
+  const discount = applied?.discount ?? 0
   const hasProblem = (cart?.items ?? []).some(
     (item) => !item.book.is_active || item.quantity > item.book.stock_quantity,
   )
@@ -51,9 +56,20 @@ export default function CheckoutPage() {
 
   // Đặt đơn: BE tự tính lại tiền + trừ kho trong transaction (FE chỉ gửi address + note + phương thức).
   // Thành công → dọn cache giỏ (BE đã xóa giỏ); VNPay thì redirect sang cổng, COD thì sang chi tiết đơn.
+  // Áp mã giảm giá: gọi preview (BE validate + tính discount từ giỏ DB). OK → lưu lại.
+  const voucherMutation = useMutation({
+    mutationFn: () => previewVoucherApi(voucherCode.trim()),
+    onSuccess: (data) => setApplied(data),
+  })
+
   const orderMutation = useMutation({
     mutationFn: () =>
-      createOrderApi({ address_id: selected!.id, note: note.trim() || undefined, payment_method: paymentMethod }),
+      createOrderApi({
+        address_id: selected!.id,
+        note: note.trim() || undefined,
+        payment_method: paymentMethod,
+        voucher_code: applied?.code, // BE validate + tính lại discount (không tin FE)
+      }),
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['cart'] })
       if (order.payment_url) {
@@ -170,11 +186,61 @@ export default function CheckoutPage() {
 
             <div className="divider my-1" />
 
+            {/* Mã giảm giá (Phase 7) — áp xong server trả số tiền giảm; BE vẫn validate lại lúc đặt */}
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Mã giảm giá</p>
+              {applied ? (
+                <div className="flex items-center justify-between gap-2 text-sm bg-success/10 rounded-box px-3 py-2">
+                  <span>
+                    Đã áp <span className="font-semibold">{applied.code}</span> — giảm{' '}
+                    {formatPrice(applied.discount)}
+                  </span>
+                  <button
+                    className="btn btn-ghost btn-xs"
+                    onClick={() => {
+                      setApplied(null)
+                      setVoucherCode('')
+                    }}
+                  >
+                    Bỏ
+                  </button>
+                </div>
+              ) : (
+                <div className="join w-full">
+                  <input
+                    className="input input-bordered input-sm join-item flex-1"
+                    placeholder="Nhập mã (vd WELCOME10)"
+                    value={voucherCode}
+                    onChange={(e) => setVoucherCode(e.target.value)}
+                  />
+                  <button
+                    className="btn btn-sm btn-outline join-item"
+                    disabled={!voucherCode.trim() || voucherMutation.isPending}
+                    onClick={() => voucherMutation.mutate()}
+                  >
+                    {voucherMutation.isPending && <span className="loading loading-spinner loading-xs" />}
+                    Áp dụng
+                  </button>
+                </div>
+              )}
+              {voucherMutation.isError && !applied && (
+                <p className="text-error text-sm">{getApiErrorMessage(voucherMutation.error)}</p>
+              )}
+            </div>
+
+            <div className="divider my-1" />
+
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>Tạm tính</span>
                 <span>{formatPrice(subtotal)}</span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-success">
+                  <span>Giảm giá{applied ? ` (${applied.code})` : ''}</span>
+                  <span>-{formatPrice(discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Phí vận chuyển{selected ? ` (${selected.province_name})` : ''}</span>
                 <span>
@@ -191,7 +257,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-lg font-bold">
                 <span>Tổng cộng</span>
                 <span className="text-primary">
-                  {fee ? formatPrice(subtotal + fee.shipping_fee) : '—'}
+                  {fee ? formatPrice(subtotal + fee.shipping_fee - discount) : '—'}
                 </span>
               </div>
             </div>

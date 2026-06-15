@@ -167,6 +167,37 @@ async function seedCatalog() {
   console.log(`✔ Book: ${BOOKS.length}`);
 }
 
+// ---------- 5. Voucher mẫu (Phase 7) ----------
+
+async function seedVouchers() {
+  // upsert theo code (unique) → idempotent. expire_at để trống = không hết hạn (demo còn hiệu lực).
+  const vouchers = [
+    {
+      code: 'WELCOME10',
+      discount_type: 'percentage' as const,
+      discount_value: 10, // giảm 10%
+      min_order: 0,
+      max_discount: 50_000, // trần giảm 50k
+      usage_limit: 1000,
+      per_user_limit: 1,
+    },
+    {
+      code: 'SALE20K',
+      discount_type: 'fixed' as const,
+      discount_value: 20_000, // giảm 20.000đ
+      min_order: 200_000, // đơn từ 200k mới áp dụng
+      max_discount: null,
+      usage_limit: 500,
+      per_user_limit: 3,
+    },
+  ];
+
+  for (const v of vouchers) {
+    await prisma.voucher.upsert({ where: { code: v.code }, update: {}, create: v });
+  }
+  console.log(`✔ Voucher: ${vouchers.length} mã mẫu (WELCOME10 10% trần 50k / SALE20K -20k đơn từ 200k)`);
+}
+
 // ---------- main ----------
 
 async function main() {
@@ -174,6 +205,7 @@ async function main() {
   await seedShippingZones(provinces);
   await seedAdmin();
   await seedCatalog();
+  await seedVouchers();
 }
 
 main()

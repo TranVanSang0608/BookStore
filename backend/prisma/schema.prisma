@@ -86,10 +86,11 @@ model User {
   email_verified Boolean  @default(false) // Phase 6: đã xác thực email chưa (D51)
   created_at     DateTime @default(now())
 
-  addresses    Address[]
-  cart         Cart?
-  orders       Order[]
-  email_tokens EmailToken[]
+  addresses       Address[]
+  cart            Cart?
+  orders          Order[]
+  email_tokens    EmailToken[]
+  voucher_usages  VoucherUsage[]
 }
 
 // ---------- Email token (Phase 6 — xác thực email + đặt lại mật khẩu) ----------
@@ -227,8 +228,10 @@ model Order {
   discount_amount Int @default(0)
   total           Int
 
-  // Snapshot voucher — chỉ lưu code dạng string; FK voucher_id sẽ thêm khi làm bảng Voucher (NICE)
+  // Snapshot voucher (Phase 7): lưu code + discount_amount ở trên; voucher_id FK chỉ để
+  // analytics, KHÔNG đọc lại từ đó khi hiển thị đơn cũ (đơn cũ đọc voucher_code snapshot — D25/D54)
   voucher_code String?
+  voucher_id   Int?
 
   // Snapshot địa chỉ giao hàng — cố ý KHÔNG có FK về Address:
   // user xóa/sửa address sau này thì đơn cũ vẫn đọc đúng địa chỉ lúc đặt
@@ -244,6 +247,7 @@ model Order {
 
   items    OrderItem[]
   payments Payment[]
+  voucher  Voucher? @relation(fields: [voucher_id], references: [id])
 
   @@index([user_id])
   @@index([status]) // cron auto-cancel quét đơn Pending theo cột này
@@ -300,4 +304,43 @@ model ShippingZone {
   province_code  String @unique
   fee            Int // VND
   free_threshold Int? // đơn từ ngưỡng này trở lên free ship; null = không áp dụng free ship
+}
+
+// ---------- Voucher (Phase 7 — NICE) ----------
+
+// Kiểu giảm giá: theo % (có trần max_discount) hoặc số tiền cố định (đồng). Trừ vào subtotal.
+enum VoucherDiscountType {
+  percentage
+  fixed
+}
+
+model Voucher {
+  id             Int                 @id @default(autoincrement())
+  code           String              @unique // mã user nhập, chuẩn hóa UPPERCASE
+  discount_type  VoucherDiscountType
+  discount_value Int // percentage: 1–100; fixed: số đồng
+  min_order      Int                 @default(0) // đơn (subtotal) tối thiểu để áp dụng
+  max_discount   Int? // trần số tiền giảm cho loại %; null = không trần
+  expire_at      DateTime? // null = không hết hạn
+  usage_limit    Int? // tổng lượt dùng tối đa; null = không giới hạn
+  used_count     Int                 @default(0) // tăng atomic khi đặt đơn (D45-style)
+  per_user_limit Int                 @default(1) // mỗi user dùng tối đa mấy lần
+  is_active      Boolean             @default(true)
+  created_at     DateTime            @default(now())
+
+  orders Order[]
+  usages VoucherUsage[]
+}
+
+// Log mỗi lần một user dùng voucher — nền cho per_user_limit (đếm theo voucher_id + user_id)
+model VoucherUsage {
+  id         Int      @id @default(autoincrement())
+  voucher_id Int
+  voucher    Voucher  @relation(fields: [voucher_id], references: [id], onDelete: Cascade)
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  order_id   Int // đơn đã dùng mã (để hủy đơn thì xóa đúng dòng này)
+  used_at    DateTime @default(now())
+
+  @@index([voucher_id, user_id])
 }

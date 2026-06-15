@@ -9,6 +9,7 @@ import AdminBooksPage from '../pages/admin/AdminBooksPage'
 import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage'
 import AdminOrderDetailPage from '../pages/admin/AdminOrderDetailPage'
 import AdminOrdersPage from '../pages/admin/AdminOrdersPage'
+import AdminVouchersPage from '../pages/admin/AdminVouchersPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
@@ -95,6 +96,7 @@ export default function AppRoutes() {
           <Route path="books/:id/edit" element={<AdminBookFormPage />} />
           <Route path="categories" element={<AdminCategoriesPage />} />
           <Route path="authors" element={<AdminAuthorsPage />} />
+          <Route path="vouchers" element={<AdminVouchersPage />} />
         </Route>
       </Route>
     </Routes>
