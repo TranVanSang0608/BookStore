@@ -88,6 +88,12 @@ export default function LoginPage() {
           </form>
 
           <p className="text-sm text-center mt-2">
+            <Link to="/forgot-password" className="link">
+              Quên mật khẩu?
+            </Link>
+          </p>
+
+          <p className="text-sm text-center">
             Chưa có tài khoản?{' '}
             <Link to="/register" className="link link-primary">
               Đăng ký ngay

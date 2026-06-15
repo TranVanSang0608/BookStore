@@ -511,4 +511,100 @@ Khách đặt đơn được, trả tiền COD/VNPay, admin xác nhận → giao
 
 ---
 
-*(Phase 6+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*
+## Phase 6 — Email service (NICE tier) (2026-06-15)
+
+### Mục tiêu phase
+
+Tính năng NICE đầu tiên sau checkpoint: gửi email cho 3 tình huống — **xác nhận đơn hàng**,
+**xác thực email** khi đăng ký, **quên/đặt lại mật khẩu**. Đây là tier NICE nên KHÔNG đụng
+luồng CORE (chỉ thêm, không sửa nghiệp vụ đặt đơn). 1 migration nhỏ (cờ `email_verified` +
+bảng `EmailToken`).
+
+### Đã làm (6 lát)
+
+| Lát | Nội dung | Kết quả xác minh |
+|---|---|---|
+| 1 | Hạ tầng: `lib/mailer.ts` (Resend, lazy config + `sendMail`/`sendMailSafe`), `lib/email-templates.ts` (renderEmail thuần), `.env` + `scripts/smoke-mailer.ts` | 7 unit test template; smoke test gửi email THẬT qua Resend OK (mã thư trả về) |
+| 2 | Email xác nhận đơn: `modules/notification/order-email.ts` (build HTML thuần + nạp đơn theo mã), móc fire-and-forget sau `createOrder` trong order controller | 6 unit test build HTML (tiền VND, COD/VNPay, escape) |
+| 3 | Migration `email_verified` + bảng `EmailToken`; `lib/email-token.ts` (sinh/hash/tiêu thụ); đăng ký gửi mail verify; route `POST /auth/verify-email` + `/resend-verification` | 5 unit test token (hash, lưu hash không lưu raw, compare-and-set) |
+| 4 | Quên/đặt lại mật khẩu: `forgotPassword` (anti-enumeration) + `resetPassword`; route `/auth/forgot-password` + `/reset-password`; email reset | 4 unit test (3 ca anti-enumeration + hash mật khẩu mới) |
+| 5 | FE: trang `/verify-email`, `/forgot-password`, `/reset-password`; banner nhắc xác thực ở Layout; link "Quên mật khẩu?" ở login; `api/auth` thêm 4 endpoint | build + lint xanh; browser: 3 trang render đúng, edge case thiếu token báo lỗi; curl 2 endpoint (verify rác→400, forgot lạ→200 chung) |
+| 6 | Tài liệu: mục này + D50–D53 + CLAUDE.md + THUAT-NGU + cổng hiểu | 137 unit test BE xanh |
+
+### Quyết định mới (chi tiết: THIET-KE.md mục 10)
+
+- **D50** — Dùng **Resend** thay Nodemailer/Gmail (pivot D16): chỉ cần 1 API key, không phải bật 2FA + app-password.
+- **D51** — Gửi mail **fail-soft**, luôn NGOÀI `$transaction`: email lỗi không bao giờ làm hỏng/chậm luồng chính.
+- **D52** — **1 bảng `EmailToken`** cho cả verify + reset; DB lưu HASH; token dùng-một-lần + có hạn; tiêu thụ bằng compare-and-set.
+- **D53** — `email_verified` **không chặn** đăng nhập/mua hàng (chỉ nhắc bằng banner); forgot-password chống dò tài khoản.
+
+### Khái niệm cần hiểu để bảo vệ
+
+**Hạ tầng email:**
+
+1. **"Đường ống" mailer giấu nhà cung cấp** — mọi nơi chỉ gọi `sendMail`/`sendMailSafe`, không biết là Resend. Đổi sang Gmail/SES sau này chỉ sửa 1 file `lib/mailer.ts` (cùng tinh thần lib singleton vnpay/cloudinary). Cấu hình đọc lazy mỗi lần dùng (chắc dotenv đã nạp), thiếu key → fail rõ.
+2. **`sendMail` vs `sendMailSafe`** — `sendMail` NÉM lỗi (dùng khi cần biết kết quả: smoke test). `sendMailSafe` NUỐT lỗi + log (dùng trong luồng nghiệp vụ): mạng/Resend trục trặc cũng không vỡ việc chính. Email luôn fire-and-forget (`void ...`), không `await` chặn response.
+3. **HTML email phải inline style** — ứng dụng mail không nạp CSS ngoài; `renderEmail` ráp layout với style nhúng thẳng vào thẻ. `escapeHtml` cho text user nhập (tên, tiêu đề) chống chèn thẻ.
+4. **Giới hạn Resend test** — người gửi `onboarding@resend.dev` CHỈ giao tới email chủ tài khoản Resend; gửi tự do cần verify domain. Demo gửi về chính email mình là đủ.
+
+**Token an toàn (hội đồng có thể hỏi "link xác thực hoạt động sao"):**
+
+5. **DB chỉ lưu HASH của token** — token thật (64 hex ngẫu nhiên) chỉ nằm trong link email; DB lưu `sha256(token)`, GIỐNG `password_hash`. Lộ DB cũng không tái tạo được link. Lúc xác thực: hash token nhận được rồi so với DB.
+6. **Tiêu thụ token = compare-and-set** — `updateMany({ where:{ token_hash, used_at:null, expires_at>now } }, { used_at:now })` rồi assert `count===1`. Bấm link 2 lần thì chỉ 1 lần thắng → idempotent (cùng họ trừ kho D45 / hủy đơn / reconcile VNPay). Hết hạn / đã dùng / sai → count=0 → 400.
+7. **1 bảng cho 2 việc** — `EmailToken.type` phân biệt verify_email (hạn 24h) / reset_password (hạn 1h, ngắn hơn vì nhạy cảm hơn). Dùng string literal + import type-only (tránh lỗi Jest generated client — bài học Phase 4).
+
+**Bảo mật flow tài khoản:**
+
+8. **Quên mật khẩu chống dò tài khoản** — LUÔN trả CÙNG thông báo "Nếu email tồn tại..." dù email có hay không (giống login Phase 1). Chỉ thực gửi mail khi user tồn tại + có password (tài khoản OAuth tương lai không có pass để đặt lại).
+9. **email_verified không khóa tài khoản (D53)** — verify là "nudge" qua banner, user vẫn dùng/mua được. Đơn giản hóa MVP; khóa tài khoản chưa verify là quyết định UX lớn hơn, để sau.
+10. **Trade-off JWT thuần (nhắc lại Phase 1)** — đặt lại mật khẩu xong, token đăng nhập CŨ vẫn sống tới hết hạn 7d; thu hồi ngay cần RefreshToken (NICE).
+
+### Việc còn treo
+
+- **Luồng email THẬT** (đăng ký → mở mail → bấm link verify; quên mk → mở mail → đặt lại) verify THỦ CÔNG khi bảo vệ — như VNPay, preview không click hộ link trong mail được. Hạ tầng đã chứng minh bằng smoke test gửi mail thật + unit test logic + endpoint trả đúng.
+- Refund/thu hồi token khi đổi mật khẩu (revoke JWT cũ) — NICE, ngoài scope.
+- Email template có thể tách file riêng cho từng loại nếu nhiều thêm — hiện gộp đủ dùng.
+
+---
+
+## Code review vòng 7 — sau Phase 6 (2026-06-15)
+
+> Review code email: 0 Critical, 2 Major + 1 vấn đề scope (M3) + 6 Minor. Đã sửa M1/M2/m1/m5
+> + thêm 15 unit test (đặc biệt phủ cam kết "fail-soft" của mailer). 152/152 test xanh.
+
+### Các lỗi đã sửa & bài học
+
+| # | Lỗi | Fix | Bài học cần nhớ |
+|---|---|---|---|
+| M1 | **Timing oracle ở `forgotPassword`**: thông báo giống nhau (đúng) NHƯNG email tồn tại thì `await` gọi Resend (chậm vài trăm ms→giây), email không tồn tại trả ngay → đo độ trễ vẫn dò được tài khoản | Bỏ `await`: bọc tạo token + gửi mail trong IIFE `void (...)` fire-and-forget → thời gian phản hồi như nhau ở cả 2 nhánh (như `register` đã làm) | Chống dò tài khoản không chỉ là "thông báo giống nhau" mà còn phải **"thời gian giống nhau"** — side-channel qua độ trễ cũng rò thông tin |
+| M2a | **Token cũ không bị vô hiệu**: mỗi lần forgot/resend tạo token mới mà link cũ vẫn sống → nhiều link reset hiệu lực song song | `createEmailToken` set `used_at` cho mọi token cùng `(user, type)` chưa dùng TRƯỚC khi tạo token mới, cả 2 trong 1 `$transaction` | Token nhạy cảm nên **chỉ link mới nhất còn tác dụng** — tạo cái mới thì thu hồi cái cũ, thu hẹp cửa sổ nếu link bị lộ |
+| M2b | **Bảng `EmailToken` phình vô hạn** (token đã dùng/hết hạn không ai dọn) | Thêm `cleanupExpiredEmailTokens` (deleteMany token `used_at != null` hoặc hết hạn) vào chính cron 15 phút sẵn có | Dữ liệu "dùng xong là bỏ" cần job dọn định kỳ — tái dùng hạ tầng cron có sẵn, không dựng mới |
+| m1 | **Email "Đặt hàng thành công 🎉" cho đơn VNPay CHƯA trả tiền** (mới Pending, có thể bị auto-hủy 24h) → gây hiểu nhầm | `buildOrderConfirmationEmail` đổi tiêu đề/subject theo `payment_method`: VNPay → "Đã nhận đơn — chờ thanh toán" + nhắc hoàn tất; COD → "Đặt hàng thành công" | Nội dung thông báo phải đúng TRẠNG THÁI THẬT tại thời điểm gửi, không dùng chung một câu cho 2 luồng khác nhau |
+| m5 | **`token!.user_id` dùng non-null assertion** → nếu row bị xóa xen giữa (hiếm) ném 500 thay vì 400 | Check `if (!token) throw AppError(400)` thay cho `!` | Tránh non-null assertion ở chỗ có thể null thật dưới race — trả lỗi đúng nghĩa thay vì 500 |
+
+### Test bổ sung (15 test)
+
+- **mailer** (mới): `sendMailSafe` nuốt lỗi (Resend ném / trả error → `false`, không throw), bỏ qua khi thiếu key; `sendMail` ném lỗi khi thất bại / trả id khi OK. ← phủ cam kết fail-soft cốt lõi.
+- **auth-email** (mới): URL `/verify-email` + `/reset-password` đúng `FRONTEND_ORIGIN` + token `encodeURIComponent`.
+- **auth-verify.service** (mới): `verifyEmail` set `email_verified`; `resendVerification` chặn 400 (đã verify) / 404 (không có user); `register` lỗi gửi verify KHÔNG vỡ đăng ký.
+- **email-token**: thêm ca claim count=1 nhưng `findUnique` null → 400 (m5); kiểm vô hiệu token cũ (M2a).
+- **order-email**: VNPay không nói "thành công" mà nhắc thanh toán (m1).
+
+### Ghi nhận nhưng HOÃN (đúng nguyên tắc — minor không chặn merge)
+
+- **m2** — Không có cooldown gửi mail theo user; chỉ rate-limit IP chung (20 req/15p toàn `/api/auth/*`). 1 IP dội tối đa 20 thư/15p tới 1 hộp thư. Chấp nhận ở mức đồ án; cooldown per-email là NICE.
+- **m3** — Token nằm trong query string `?token=` có thể rò qua Referer/log. Thực hành phổ biến + token dùng-một-lần nên rủi ro thấp; biết để nói khi bảo vệ.
+- **m4** — `email_verified` "cũ" giữa các thiết bị: verify ở máy khác thì phiên cũ còn banner tới lần login sau (chưa có endpoint `/me` refresh). UX nhỏ, để Phase polish.
+- **m6** — `frontendOrigin()` lặp ở 2 file notification; gom về 1 helper là dọn dẹp thuần, để sau.
+
+### ⚠️ M3 — thay đổi `lib/vnpay.ts` KHÔNG thuộc Phase 6 (commit riêng)
+
+Diff `vnpay.ts` (xóa `vnp_ExpireDate`, đổi cách tạo `vnp_CreateDate`) là **fix có chủ đích từ TRƯỚC** khi
+bắt đầu Phase 6 (đã có trong `git status` lúc khởi đầu): bám đúng 12 tham số của code demo VNPay
+chính thức — thêm `vnp_ExpireDate` gây "Sai chữ ký". Đây là thay đổi **hành vi thanh toán** (link
+VNPay không còn tự hết hạn sau 15 phút; đơn vẫn được cron hủy sau 24h), KHÔNG liên quan email → phải
+**commit RIÊNG** (Phase 5 follow-up), không trộn vào changeset Phase 6, để truy vết "vì sao sửa" khi bảo vệ.
+
+---
+
+*(Phase 7+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*

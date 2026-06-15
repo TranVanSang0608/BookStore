@@ -6,5 +6,6 @@ export const PUBLIC_USER_SELECT = {
   name: true,
   phone: true,
   role: true,
+  email_verified: true, // Phase 6: FE hiện banner nhắc xác thực nếu false
   created_at: true,
 } as const;

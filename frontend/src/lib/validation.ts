@@ -26,6 +26,17 @@ export const registerFormSchema = z
     path: ['confirm_password'],
   })
 
+// Đặt lại mật khẩu (trang /reset-password) — mật khẩu mới + nhập lại
+export const resetPasswordFormSchema = z
+  .object({
+    password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
+    confirm_password: z.string(),
+  })
+  .refine((d) => d.password === d.confirm_password, {
+    message: 'Mật khẩu nhập lại không khớp',
+    path: ['confirm_password'],
+  })
+
 export const profileFormSchema = z.object({
   name: z.string().min(1, 'Tên không được để trống').max(100, 'Tên tối đa 100 ký tự'),
   phone: z

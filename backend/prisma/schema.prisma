@@ -46,6 +46,12 @@ enum PaymentStatus {
   Cancelled
 }
 
+// Loại token gửi qua email (Phase 6): xác thực email khi đăng ký / đặt lại mật khẩu
+enum EmailTokenType {
+  verify_email
+  reset_password
+}
+
 // ---------- Địa giới hành chính VN (tự host — D32) ----------
 // Dữ liệu đóng băng từ provinces.open-api.vn v2 (34 tỉnh, 2 cấp Tỉnh → Phường/Xã,
 // chuẩn sau sáp nhập 2025), seed 1 lần từ prisma/data/vn-locations.json.
@@ -76,12 +82,31 @@ model User {
   password_hash String? // nullable: sau này user đăng nhập Google OAuth không có password
   name          String
   phone         String?
-  role          Role     @default(user)
-  created_at    DateTime @default(now())
+  role           Role     @default(user)
+  email_verified Boolean  @default(false) // Phase 6: đã xác thực email chưa (D51)
+  created_at     DateTime @default(now())
 
-  addresses Address[]
-  cart      Cart?
-  orders    Order[]
+  addresses    Address[]
+  cart         Cart?
+  orders       Order[]
+  email_tokens EmailToken[]
+}
+
+// ---------- Email token (Phase 6 — xác thực email + đặt lại mật khẩu) ----------
+// MỘT bảng dùng cho CẢ 2 việc, phân biệt bằng cột `type`. DB chỉ lưu HASH của token
+// (giống password_hash) — token thật chỉ nằm trong link gửi qua email. Dùng MỘT LẦN
+// (used_at) + có hạn (expires_at). Lộ DB cũng không tái tạo được token gốc.
+model EmailToken {
+  id         Int            @id @default(autoincrement())
+  user_id    Int
+  user       User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token_hash String         @unique
+  type       EmailTokenType
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime       @default(now())
+
+  @@index([user_id])
 }
 
 model Address {

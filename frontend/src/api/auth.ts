@@ -7,6 +7,7 @@ export interface PublicUser {
   name: string
   phone: string | null
   role: 'user' | 'admin'
+  email_verified: boolean
   created_at: string
 }
 
@@ -35,5 +36,31 @@ export async function registerApi(input: RegisterInput): Promise<AuthData> {
 
 export async function loginApi(input: { email: string; password: string }): Promise<AuthData> {
   const { data } = await apiClient.post<ApiResponse<AuthData>>('/auth/login', input)
+  return data.data
+}
+
+// ----- Phase 6: xác thực email + quên/đặt lại mật khẩu -----
+
+// Xác thực email bằng token lấy từ link trong email
+export async function verifyEmailApi(token: string): Promise<{ verified: boolean }> {
+  const { data } = await apiClient.post<ApiResponse<{ verified: boolean }>>('/auth/verify-email', { token })
+  return data.data
+}
+
+// Gửi lại email xác thực (cần đăng nhập — interceptor tự gắn token)
+export async function resendVerificationApi(): Promise<{ sent: boolean }> {
+  const { data } = await apiClient.post<ApiResponse<{ sent: boolean }>>('/auth/resend-verification')
+  return data.data
+}
+
+// Quên mật khẩu — backend luôn trả thông báo chung (chống dò tài khoản)
+export async function forgotPasswordApi(email: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ message: string }>>('/auth/forgot-password', { email })
+  return data.data
+}
+
+// Đặt lại mật khẩu bằng token từ link + mật khẩu mới
+export async function resetPasswordApi(token: string, password: string): Promise<{ reset: boolean }> {
+  const { data } = await apiClient.post<ApiResponse<{ reset: boolean }>>('/auth/reset-password', { token, password })
   return data.data
 }

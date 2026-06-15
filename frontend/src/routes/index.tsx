@@ -9,8 +9,11 @@ import AdminBooksPage from '../pages/admin/AdminBooksPage'
 import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage'
 import AdminOrderDetailPage from '../pages/admin/AdminOrderDetailPage'
 import AdminOrdersPage from '../pages/admin/AdminOrdersPage'
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
+import VerifyEmailPage from '../pages/auth/VerifyEmailPage'
 import AuthorPage from '../pages/books/AuthorPage'
 import BookDetailPage from '../pages/books/BookDetailPage'
 import BookListPage from '../pages/books/BookListPage'
@@ -35,6 +38,10 @@ export default function AppRoutes() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        {/* Phase 6 — xác thực email + quên/đặt lại mật khẩu (đều công khai) */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/profile"
           element={

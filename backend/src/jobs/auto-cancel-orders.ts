@@ -39,12 +39,22 @@ export async function cancelStalePendingOrders() {
   logger.info('Cron quét đơn Pending quá 24h', { quet: stale.length, loi: failed });
 }
 
+// Dọn rác bảng EmailToken: xóa token ĐÃ DÙNG hoặc ĐÃ HẾT HẠN (không còn giá trị) để bảng
+// không phình vô hạn theo thời gian. Token còn hiệu lực + chưa dùng được giữ nguyên.
+export async function cleanupExpiredEmailTokens() {
+  const { count } = await prisma.emailToken.deleteMany({
+    where: { OR: [{ used_at: { not: null } }, { expires_at: { lt: new Date() } }] },
+  });
+  if (count > 0) logger.info('Cron dọn EmailToken đã dùng/hết hạn', { xoa: count });
+}
+
 // Chạy mỗi 15 phút. Gọi từ server.ts (KHÔNG ở app.ts) để Jest/Supertest import app
 // không vô tình bật cron. server.ts đã chặn thêm khi NODE_ENV=test / DISABLE_CRON=1.
 export function startAutoCancelJob() {
   cron.schedule('*/15 * * * *', () => {
     // .catch ở NGOÀI vòng lặp: nếu findMany lỗi (DB rớt...) thì log, không để unhandled rejection
     cancelStalePendingOrders().catch((err) => logger.error('Cron quét đơn lỗi', { err }));
+    cleanupExpiredEmailTokens().catch((err) => logger.error('Cron dọn EmailToken lỗi', { err }));
   });
-  logger.info('Cron auto-hủy đơn Pending >24h đã bật (mỗi 15 phút)');
+  logger.info('Cron auto-hủy đơn Pending >24h + dọn EmailToken đã bật (mỗi 15 phút)');
 }

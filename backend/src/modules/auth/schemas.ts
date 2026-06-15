@@ -18,6 +18,25 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Mật khẩu không được để trống'),
 });
 
+// Token xác thực email — chuỗi gửi trong link, FE gửi lại để xác thực
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, 'Thiếu mã xác thực'),
+});
+
+// Quên mật khẩu — chỉ cần email
+export const forgotPasswordSchema = z.object({
+  email: z.email('Email không hợp lệ'),
+});
+
+// Đặt lại mật khẩu — token từ link + mật khẩu mới (cùng rule độ dài như đăng ký)
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Thiếu mã đặt lại mật khẩu'),
+  password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
+});
+
 // Suy ra type TypeScript từ chính schema — sửa rule là type tự cập nhật theo
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

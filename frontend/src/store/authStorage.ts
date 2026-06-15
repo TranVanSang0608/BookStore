@@ -15,6 +15,9 @@ const storedAuthSchema = z.object({
     name: z.string(),
     phone: z.string().nullable(),
     role: z.enum(['user', 'admin']),
+    // default(false): phiên CŨ lưu trước Phase 6 chưa có field này → không bị coi là
+    // hỏng (khỏi đăng xuất oan); lần gọi /me hoặc login sau sẽ có giá trị thật
+    email_verified: z.boolean().default(false),
     created_at: z.string(),
   }),
 })

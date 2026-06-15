@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Đồ án sinh viên: **Website bán sách trực tuyến** (sách giấy, B2C, tiếng Việt, thanh toán COD + VNPay sandbox). Toàn bộ quyết định kiến trúc nằm trong **[THIET-KE.md](THIET-KE.md)** ở root repo — đây là source of truth, đọc nó trước khi code bất kỳ module nào.
 
-**Trạng thái (2026-06-14):** **Phase 5 HOÀN THÀNH → 🛑 CHECKPOINT: CORE end-to-end XONG** (chi tiết + khái niệm ôn tập: [DEV-LOG.md](DEV-LOG.md)). Payment VNPay sandbox đầy đủ: BE `lib/vnpay.ts` (HMAC-SHA512 build URL + verify chữ ký, bám demo VNPay D47), module `payment/` — `POST /vnpay/create` (auth), `GET /vnpay/return` (public, 302 về FE) + `GET /vnpay/ipn` (public, RspCode) dùng chung `reconcileVnpayPayment` idempotent (đối chiếu amount từ DB, conditional update Pending→Paid); createOrder branch gateway theo payment_method + sinh txn_ref (D46/D48); cron bỏ qua đơn đã Paid (D49). FE: CheckoutPage chọn COD/VNPay (vnpay → redirect cổng), OrderDetailPage hiện trạng thái thanh toán + nút retry + banner `?payment=`. 110 unit test xanh; verify callback đã ký trên DB thật (Paid + idempotent + tamper→97). **Credentials sandbox đã điền trong `backend/.env` (gitignored)**; luồng UI VNPay thật (thẻ NCB + OTP) verify thủ công khi bảo vệ (preview không ra domain ngoài được); IPN thật cần ngrok/deploy (D18). **7 module CORE chạy thông** — quyết định checkpoint: nộp+polish hay tiếp NICE tier.
+**Trạng thái (2026-06-15):** **Phase 6 HOÀN THÀNH** — tính năng NICE đầu tiên sau checkpoint: **Email service** (chi tiết + khái niệm ôn tập: [DEV-LOG.md](DEV-LOG.md)). Dùng **Resend** (pivot D16→D50): `lib/mailer.ts` là "đường ống" duy nhất (`sendMail` ném lỗi / `sendMailSafe` nuốt lỗi — fail-soft, luôn fire-and-forget ngoài transaction, D51), `lib/email-templates.ts` ráp HTML inline-style. 3 luồng: (1) **email xác nhận đơn** móc sau `createOrder` (`modules/notification/order-email.ts`); (2) **xác thực email** khi đăng ký + `email_verified` (banner nhắc, không chặn mua hàng — D53); (3) **quên/đặt lại mật khẩu** (anti-enumeration). Token verify/reset: 1 bảng `EmailToken` lưu HASH, dùng-một-lần, compare-and-set (D52); `lib/email-token.ts`. FE: trang `/verify-email` `/forgot-password` `/reset-password` + banner Layout + link login. **137 unit test BE xanh**, build+lint FE xanh, smoke `scripts/smoke-mailer.ts` gửi mail thật OK. **Luồng email THẬT (mở mail, bấm link verify/reset) verify thủ công khi bảo vệ** — như VNPay, preview không click hộ link trong mail. `RESEND_API_KEY` đã điền trong `backend/.env` (gitignored). **Trước đó (Phase 5):** 7 module CORE chạy thông end-to-end (Auth→Catalog→Cart→Checkout→Order→Payment COD+VNPay).
 
 ## Lệnh dev & test
 
@@ -16,9 +16,37 @@ Trong `frontend/`: `npm run dev` (port 5173) | `npm run build` (tsc + vite build
 
 Preview: `.claude/launch.json` đã khai báo 2 server tên `backend` / `frontend`. Đổi schema Prisma xong PHẢI chạy `npx prisma generate` (client nằm ở `backend/src/generated/`, gitignored, tự generate lại khi `npm install` nhờ postinstall).
 
-**Người dùng là sinh viên phải bảo vệ đồ án trước hội đồng** — họ cần HIỂU mọi đoạn code được tạo ra:
-- Làm lát nhỏ, dùng plan mode trước khi code feature lớn, giải thích bằng tiếng Việt sau mỗi feature.
-- Ưu tiên code rõ ràng, dễ đọc hơn là pattern "thông minh". Tránh abstraction không cần thiết.
+## Quy tắc giải thích & kiểm tra hiểu (BẮT BUỘC — ưu tiên ngang việc code đúng)
+
+**Người dùng là sinh viên MỚI học lập trình, sắp bảo vệ đồ án trước hội đồng.** Họ phải TỰ giải thích được code của chính mình; hội đồng sẽ hỏi "chỗ này chạy thế nào, sao em làm vậy". Rủi ro lớn nhất hiện tại: **code chạy nhưng user không hiểu nó hoạt động ra sao** vì giải thích trước giờ quá dài + đầy thuật ngữ nên user bỏ qua. Mọi quy tắc dưới đây để bịt lỗ hổng đó. Mục tiêu của đồ án là USER hiểu, không phải AI hiểu thay.
+
+### 1. Giải thích ở tầm người mới — KHÔNG phải dev senior
+- Mặc định giải thích bằng tiếng Việt như cho **người mới học**, KHÔNG dùng thuật ngữ. Thuật ngữ bắt buộc dùng thì kèm ngay 1 ví dụ đời thường.
+- **ĐỪNG dán lại code để "giải thích".** Giải thích Ý TƯỞNG và LUỒNG chạy (cái gì gọi cái gì, dữ liệu đi đâu), không đọc lại cú pháp.
+- Ngắn gọn, chia đoạn nhỏ. Một bài giải thích dài = user sẽ bỏ qua (đó là điều đang xảy ra).
+
+### 2. Giải thích theo "độ cao", không từng dòng
+Sau mỗi phase/feature, mặc định đưa:
+- **Bản đồ file:** mỗi file MỘT câu — nó làm gì.
+- **Luồng dữ liệu:** một thao tác (vd "bấm Đặt hàng") chạm qua những file nào, theo thứ tự, từ FE → API → backend → DB và quay lại.
+- Chi tiết từng dòng CHỈ khi user hỏi cụ thể về dòng đó.
+
+### 3. CỔNG HIỂU sau mỗi phase (BLOCKING — không tự ý bỏ qua)
+Kết thúc mỗi phase, TRƯỚC khi sang phase mới:
+- AI **tự đặt cho user 3 câu hỏi** kiểm tra hiểu (về luồng chạy + lý do thiết kế, KHÔNG hỏi cú pháp).
+- User trả lời → AI chấm, chỉ rõ chỗ sai/thiếu, giải thích lại đúng phần đó.
+- **Code chạy được KHÔNG có nghĩa là phase xong.** Phase chỉ xong khi user trả lời được. Không tự nhảy sang phase mới chỉ vì test xanh.
+
+### 4. Sổ thuật ngữ — `THUAT-NGU.md` (ở root repo)
+- Mỗi khi xuất hiện thuật ngữ mới (middleware, endpoint, ORM, transaction, JWT, idempotent...), thêm 1 dòng vào `THUAT-NGU.md`: định nghĩa **siêu đơn giản (1–2 câu) + ví dụ đời thường**.
+- Không nhồi định nghĩa hàn lâm. Đây là sổ tay để user tra nhanh, không phải từ điển.
+
+### 5. Trace 1 feature xuyên suốt khi user muốn "hình dung cách chạy"
+Dẫn user đi qua từng file theo đúng thứ tự một thao tác chạm tới (vd "thêm sách vào giỏ": click BookCard → `api/cart.ts` → `POST /api/cart` → `cart/controller.ts` → `cart/service.ts` → Prisma → DB → trả về cập nhật badge). Đây là cách xây "hình dung cách hoạt động" nhanh nhất.
+
+### Vẫn giữ (quy trình đang đúng)
+- Plan kỹ + chia phase + làm lát nhỏ, dùng plan mode trước feature lớn — quy trình này TỐT, chỉ thiếu cổng hiểu ở mục 3.
+- Ưu tiên code rõ ràng, dễ đọc hơn pattern "thông minh"; tránh abstraction không cần thiết.
 - Với business logic phức tạp (transaction, VNPay signature, cart merge), thêm comment tiếng Việt giải thích.
 - Ghi DEV-LOG.md mỗi phase để user ôn lại khi bảo vệ.
 

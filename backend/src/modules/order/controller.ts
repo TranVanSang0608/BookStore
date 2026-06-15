@@ -3,6 +3,7 @@ import { getClientIp } from '../../lib/client-ip';
 import { parseId } from '../../lib/parse-id';
 import { assertVnpayConfigured } from '../../lib/vnpay';
 import { AppError } from '../../middleware/error';
+import { sendOrderConfirmationEmail } from '../notification/order-email';
 import * as paymentService from '../payment/service';
 import { listOrdersQuerySchema } from './schemas';
 import * as orderService from './service';
@@ -15,6 +16,10 @@ export async function create(req: Request, res: Response) {
   if (req.body.payment_method === 'vnpay') assertVnpayConfigured();
 
   const order = await orderService.createOrder(req.user!.id, req.body);
+
+  // Gửi email xác nhận đơn — fire-and-forget (KHÔNG await): email là phụ trợ, fail-soft
+  // bên trong nên lỗi gửi mail không bao giờ làm hỏng việc đặt hàng / chậm response.
+  if (order) void sendOrderConfirmationEmail(order.order_code);
 
   // Đơn VNPay: dựng luôn URL thanh toán để FE redirect thẳng sang cổng VNPay
   // (tái dùng Payment vnpay Pending mà createOrder vừa tạo). COD thì chỉ trả order.
