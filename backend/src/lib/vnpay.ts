@@ -79,9 +79,10 @@ export interface BuildPaymentUrlParams {
 }
 
 // Dựng URL redirect sang trang thanh toán VNPay. Trả về URL đầy đủ kèm vnp_SecureHash.
+// Bộ tham số KHỚP ĐÚNG code demo chính thức VNPay (12 tham số, KHÔNG có vnp_ExpireDate):
+// một số endpoint VNPay không tính vnp_ExpireDate vào chữ ký → thêm nó gây "Sai chữ ký".
 export function buildPaymentUrl({ txnRef, amount, orderInfo, ipAddr }: BuildPaymentUrlParams): string {
   const cfg = getVnpConfig();
-  const now = new Date();
 
   let params: Record<string, string> = {
     vnp_Version: '2.1.0',
@@ -95,8 +96,7 @@ export function buildPaymentUrl({ txnRef, amount, orderInfo, ipAddr }: BuildPaym
     vnp_Amount: String(amount * 100), // VNPay tính theo đơn vị nhỏ nhất → ×100
     vnp_ReturnUrl: cfg.returnUrl,
     vnp_IpAddr: ipAddr,
-    vnp_CreateDate: formatVnpDate(now),
-    vnp_ExpireDate: formatVnpDate(new Date(now.getTime() + 15 * 60 * 1000)), // hết hạn sau 15 phút
+    vnp_CreateDate: formatVnpDate(new Date()),
   };
 
   params = sortObject(params);
