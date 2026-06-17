@@ -16,6 +16,7 @@ router.get('/admin', auth, adminOnly, controller.adminList);
 router.get('/admin/:id', auth, adminOnly, controller.adminDetail); // form sửa cần cả sách đang ẩn
 router.get('/batch', controller.batch); // public — guest cart enrich theo ids
 router.get('/', controller.list);
+router.get('/:slug/related', controller.related); // sách liên quan (Phase 8) — trước /:slug
 router.get('/:slug', controller.detail);
 
 router.post('/', auth, adminOnly, validate(createBookSchema), controller.create);

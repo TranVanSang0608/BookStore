@@ -9,6 +9,8 @@ export interface BookCardData {
   price: number
   stock_quantity: number
   cover_image_url: string | null
+  avg_rating: number // Phase 8 — điểm trung bình (0 nếu chưa có review)
+  review_count: number
   author: { id: number; name: string }
 }
 
@@ -45,6 +47,12 @@ export async function fetchBooks(params: Record<string, string>): Promise<BookLi
 
 export async function fetchBookBySlug(slug: string): Promise<BookDetail> {
   const { data } = await apiClient.get<ApiResponse<BookDetail>>(`/books/${slug}`)
+  return data.data
+}
+
+// Sách liên quan (Phase 8) — cùng tác giả / thể loại, hiện dưới trang chi tiết
+export async function fetchRelatedBooks(slug: string): Promise<BookCardData[]> {
+  const { data } = await apiClient.get<ApiResponse<BookCardData[]>>(`/books/${slug}/related`)
   return data.data
 }
 

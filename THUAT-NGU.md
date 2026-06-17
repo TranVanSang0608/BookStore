@@ -150,6 +150,15 @@ Mã chữ-số nhập lúc đặt hàng để được bớt tiền. Đồ án c
 **used_count / per_user_limit**
 `used_count` = đã có bao nhiêu lượt dùng mã (tăng atomic khi đặt đơn, hoàn khi hủy — giống trừ/hoàn kho). `per_user_limit` = một người được dùng mã đó tối đa mấy lần (đếm qua bảng `VoucherUsage`). _Ví dụ: "mỗi khách 1 phiếu", "tổng cửa hàng phát 1000 phiếu"._
 
+**Wishlist (danh sách yêu thích)**
+Sách user bấm "tim" để lưu lại xem sau, chưa mua. _Ví dụ: ngăn "để dành" trong app mua sắm._ Đồ án: bấm tim 1 lần là thích, bấm lại là bỏ (toggle); mỗi sách chỉ lưu 1 dòng.
+
+**Verified purchase (đã mua mới được đánh giá)**
+Chỉ cho đánh giá sách khi user THẬT SỰ đã mua (có đơn trạng thái "Đã giao" chứa sách đó). _Ví dụ: chỉ khách đã ăn ở quán mới để lại review trên Google Maps._ Chống review giả/spam.
+
+**Denormalize (dữ liệu nhân bản có chủ đích)**
+Cố tình lưu sẵn con số tổng hợp (vd điểm sao trung bình + số lượt) ngay trên bảng Book, thay vì mỗi lần hiển thị lại tính từ bảng Review. _Ví dụ: ghi sẵn "4.5★" lên bìa thay vì cộng lại tất cả phiếu mỗi lần ai nhìn._ Đổi lại: phải cập nhật con số này trong transaction mỗi khi review đổi để khỏi lệch.
+
 ---
 
 _Cập nhật: thêm từ mới mỗi khi gặp. Giữ định nghĩa ngắn — đây là sổ tra nhanh._

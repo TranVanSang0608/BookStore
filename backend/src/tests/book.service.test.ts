@@ -1,6 +1,13 @@
 // Unit test cho book service — mock Prisma, không chạm DB thật
 import { prisma } from '../lib/prisma';
-import { createBook, getBookBySlug, listBooks, setBookActive, updateBook } from '../modules/catalog/book.service';
+import {
+  createBook,
+  getBookBySlug,
+  getRelatedBooks,
+  listBooks,
+  setBookActive,
+  updateBook,
+} from '../modules/catalog/book.service';
 
 jest.mock('../lib/prisma', () => ({
   prisma: {
@@ -186,5 +193,40 @@ describe('setBookActive', () => {
     await setBookActive(5, false);
 
     expect(mockBookUpdate).toHaveBeenCalledWith({ where: { id: 5 }, data: { is_active: false } });
+  });
+});
+
+describe('getRelatedBooks (Phase 8)', () => {
+  it('sách không tồn tại → mảng rỗng', async () => {
+    (prisma.book.findFirst as jest.Mock).mockResolvedValue(null);
+    expect(await getRelatedBooks('khong-co')).toEqual([]);
+  });
+
+  it('lọc cùng tác giả HOẶC chung thể loại, loại chính nó, active, take 6', async () => {
+    (prisma.book.findFirst as jest.Mock).mockResolvedValue({
+      id: 5,
+      author_id: 2,
+      categories: [{ category_id: 3 }, { category_id: 4 }],
+    });
+    (prisma.book.findMany as jest.Mock).mockResolvedValue([{ id: 6 }]);
+
+    const res = await getRelatedBooks('mat-biec');
+    const arg = (prisma.book.findMany as jest.Mock).mock.calls[0][0];
+    expect(arg.where).toMatchObject({
+      is_active: true,
+      id: { not: 5 },
+      OR: [{ author_id: 2 }, { categories: { some: { category_id: { in: [3, 4] } } } }],
+    });
+    expect(arg.take).toBe(6);
+    expect(res).toEqual([{ id: 6 }]);
+  });
+
+  it('sách không có thể loại → categoryIds rỗng, vẫn chạy (nhánh tác giả)', async () => {
+    (prisma.book.findFirst as jest.Mock).mockResolvedValue({ id: 5, author_id: 2, categories: [] });
+    (prisma.book.findMany as jest.Mock).mockResolvedValue([]);
+
+    await getRelatedBooks('khong-the-loai');
+    const arg = (prisma.book.findMany as jest.Mock).mock.calls[0][0];
+    expect(arg.where.OR[1].categories.some.category_id.in).toEqual([]);
   });
 });

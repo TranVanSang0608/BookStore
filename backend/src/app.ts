@@ -15,8 +15,10 @@ import healthRoutes from './modules/health/routes';
 import locationsRoutes from './modules/locations/routes';
 import shippingRoutes from './modules/shipping/routes';
 import uploadRoutes from './modules/upload/routes';
+import reviewRoutes from './modules/review/routes';
 import userRoutes from './modules/user/routes';
 import voucherRoutes from './modules/voucher/routes';
+import wishlistRoutes from './modules/wishlist/routes';
 
 // Cấu hình Express app — tách riêng khỏi server.ts để sau này
 // Jest/Supertest có thể import app test trực tiếp mà không cần mở port.
@@ -54,6 +56,10 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 // Voucher (Phase 7): preview mã giảm giá (checkout) + admin CRUD
 app.use('/api/vouchers', voucherRoutes);
+// Wishlist (Phase 8): thích/bỏ thích sách + danh sách yêu thích
+app.use('/api/wishlist', wishlistRoutes);
+// Review (Phase 8): đánh giá sách (verified purchase), list public
+app.use('/api/reviews', reviewRoutes);
 
 // Error handler PHẢI đăng ký sau cùng để hứng lỗi từ mọi route phía trên
 app.use(errorHandler);

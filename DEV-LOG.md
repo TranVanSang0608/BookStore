@@ -702,4 +702,77 @@ free-ship voucher, cộng dồn nhiều mã.
 
 ---
 
-*(Phase 8+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*
+## Phase 8 — Wishlist + Review + Recommend (NICE tier) (2026-06-17)
+
+### Mục tiêu phase
+
+3 tính năng quanh trang chi tiết sách: **Wishlist** (thích/bỏ thích), **Review** (đánh giá
+sao + bình luận, chỉ người đã mua), **Recommend** (sách liên quan). 1 migration (bảng
+Wishlist + Review + 2 cột rating denormalized trên Book).
+
+### Sự cố giữa phase + cách xử lý (đáng ghi để bảo vệ)
+
+Đang làm Lát 1 thì working tree bị `git checkout main` (đổi nhánh) — `main` còn ở Phase 1.
+**Không mất gì:** Phase 2–7 nằm an toàn ở nhánh `feat/phase-2-3-catalog-cart`. Đã **fast-forward
+merge** nhánh đó vào `main` (main = Phase 7). Migration `add_wishlist_review` chạy lỡ ở lượt trước
+trở thành "mồ côi" trên DB (file mất khi đổi nhánh) → `prisma migrate reset --force` (có đồng thuận
+rõ ràng, DB là DEV) để hòa giải + reseed, rồi tạo lại migration sạch. Bài học: **đổi nhánh khi có
+thay đổi chưa commit + migration đã apply lên DB = dễ lệch**; commit sớm + cẩn thận branch.
+
+### Đã làm (6 lát)
+
+| Lát | Nội dung | Kết quả xác minh |
+|---|---|---|
+| 1 | Migration Wishlist+Review+Book(avg_rating,review_count); module `wishlist` (toggle/list/ids) | 5 unit test; curl toggle→ids→list→toggle |
+| 2 | Module `review`: upsert (verified purchase + recompute rating trong tx), delete, list | 7 unit test (404/403/recompute/shape) |
+| 3 | Recommend `GET /books/:slug/related` (cùng tác giả/thể loại); `bookCardSelect` thêm rating | 2 unit test; browser: 6 sách liên quan đúng |
+| 4 | FE Wishlist: `WishlistButton` (tự chứa), WishlistPage, navbar, sao trên BookCard | build+lint xanh; browser render |
+| 5 | FE Review + Recommend: `Stars`, `ReviewsSection` (list+form sửa/xóa), `RelatedBooks` | browser: trang chi tiết đủ 4 khối |
+| 6 | Tài liệu + cổng hiểu | 196 unit test BE xanh |
+
+### Quyết định mới (chi tiết: THIET-KE.md mục 10)
+
+- **D57** — Wishlist toggle bằng unique (user_id, book_id); cần đăng nhập; list chỉ sách active; endpoint `/ids` cho FE tô tim.
+- **D58** — Review verified-purchase (đếm Order Delivered chứa sách); 1 review/user/sách (upsert để sửa); rating **denormalized** `avg_rating`/`review_count` recompute TRONG transaction; KHÔNG FK order_id (verify bằng query).
+- **D59** — Recommend = cùng tác giả HOẶC chung thể loại, loại chính nó, active, limit 6 (KHÔNG collaborative filtering).
+
+### Khái niệm cần hiểu để bảo vệ
+
+1. **Verified purchase (D5/D58)** — `upsertReview` đếm `order.count({ user_id, status:'Delivered',
+   items:{ some:{ book_id } } })`; 0 → 403. Chống review giả: chỉ ai mua + nhận hàng mới đánh giá.
+2. **Rating denormalized an toàn (D58)** — KHÔNG tính trung bình mỗi lần hiển thị (sẽ N+1 trên trang
+   list). Lưu sẵn `avg_rating`+`review_count` trên Book; mỗi lần review thay đổi thì `aggregate` lại
+   + `book.update` NẰM TRONG cùng `$transaction` → cột trên Book không bao giờ lệch bảng Review.
+3. **Upsert review = create-hoặc-update** — `@@unique(user_id, book_id)` cho phép `prisma.review.upsert`
+   theo khóa đó: chưa có thì tạo, có rồi thì sửa. FE 1 form lo cả viết mới lẫn sửa (key remount theo review.id).
+4. **Recommend đơn giản (D59)** — 1 câu `findMany` với `OR:[{author_id}, {categories:{some:{category_id:{in}}}}]`,
+   `id:{not: self}`, `is_active`, `take:6`. KHÔNG collaborative filtering (ngoài scope, cần lịch sử mua nhiều user).
+5. **WishlistButton tự chứa** — dùng query `['wishlist-ids']` biết trạng thái + mutation toggle + invalidate;
+   đặt trong `<Link>` của thẻ sách nên `preventDefault`/`stopPropagation` để bấm tim không mở trang sách.
+6. **Toggle idempotent** — bấm tim 2 lần về trạng thái đầu; `@@unique` chống 2 dòng thích cùng sách.
+
+### Việc còn treo
+
+- Đánh giá THẬT (viết review) cần 1 đơn Delivered chứa sách — verify thủ công khi bảo vệ (admin tiến trạng thái đơn).
+- Stars làm tròn về sao nguyên (không tô nửa sao) — đủ cho đồ án.
+- Nhánh: Phase 8 nằm trên `main`; nhánh `feat/phase-2-3-catalog-cart` vẫn còn (có thể xóa sau).
+
+---
+
+## Code review vòng 9 — sau Phase 8 (2026-06-17)
+
+> 0 Critical. Sửa 2 Major + 2 Minor + thêm 5 unit test (201/201 BE xanh).
+
+| # | Lỗi | Fix |
+|---|---|---|
+| MA1 | Sửa review bỏ trắng bình luận KHÔNG xóa được chữ cũ — FE gửi `undefined`, Prisma coi là "đừng đụng cột" | Service chuẩn hóa comment → **null tường minh** (`comment?.trim() ? ... : null`) cho cả create+update; FE gửi `comment` LUÔN (kể cả '') |
+| MA2 | FE chỉ xem được 10 review đầu (không phân trang) dù BE trả `totalPages` | ReviewsSection thêm `page` state + tái dùng `<Pagination>` |
+| MI3 | `toggleWishlist` race (2 tab) → P2002 → 500 | Đổi sang `deleteMany` (bỏ thích, không lỗi nếu chưa có) + `create` bắt P2002 → không bao giờ 500 |
+| MI4 | Upsert review luôn trả 201 kể cả khi SỬA | Đổi về 200 (upsert "lưu review", không phải luôn Created) |
+
+Test thêm: wishlist race P2002; review bỏ bình luận → null; `getReviewStatus` (2 ca); `getRelatedBooks` categoryIds rỗng.
+Hoãn (chấp nhận đồ án): Stars làm tròn sao nguyên (MI5); `ApiResponse<T>` lặp (MI6, đúng pattern dự án); `hasPurchased` chạy 2 lần (MI7, đúng về bảo mật — server tự chặn).
+
+---
+
+*(Phase 9+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*

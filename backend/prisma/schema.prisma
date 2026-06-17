@@ -91,6 +91,8 @@ model User {
   orders          Order[]
   email_tokens    EmailToken[]
   voucher_usages  VoucherUsage[]
+  wishlists       Wishlist[]
+  reviews         Review[]
 }
 
 // ---------- Email token (Phase 6 — xác thực email + đặt lại mật khẩu) ----------
@@ -166,12 +168,19 @@ model Book {
   pages           Int?
   is_active       Boolean @default(true) // ẩn sách thay vì xóa (soft hide)
 
+  // Rating denormalized (Phase 8 — D58): tính lại trong transaction mỗi khi review thay đổi,
+  // để hiện sao ở thẻ/danh sách mà không phải aggregate từng sách (tránh N+1)
+  avg_rating   Float @default(0)
+  review_count Int   @default(0)
+
   author_id Int
   author    Author @relation(fields: [author_id], references: [id])
 
   categories  BookCategory[]
   cart_items  CartItem[]
   order_items OrderItem[]
+  wishlists   Wishlist[]
+  reviews     Review[]
 
   created_at DateTime @default(now())
 
@@ -343,4 +352,36 @@ model VoucherUsage {
   used_at    DateTime @default(now())
 
   @@index([voucher_id, user_id])
+}
+
+// ---------- Wishlist + Review (Phase 8 — NICE) ----------
+
+// Sách user đã "thích". unique(user_id, book_id) → 1 lần thích/sách; toggle thêm/bỏ.
+model Wishlist {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  book_id    Int
+  book       Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  @@unique([user_id, book_id])
+  @@index([user_id])
+}
+
+// Đánh giá sách — chỉ user đã mua (Order Delivered chứa sách đó). unique(user_id, book_id)
+// → mỗi user 1 review/sách (sửa lại review cũ thay vì tạo mới). avg/count denormalized lên Book.
+model Review {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  book_id    Int
+  book       Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  rating     Int // 1..5
+  comment    String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, book_id])
+  @@index([book_id])
 }

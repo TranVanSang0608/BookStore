@@ -24,6 +24,7 @@ import OrderDetailPage from '../pages/orders/OrderDetailPage'
 import OrdersPage from '../pages/orders/OrdersPage'
 import HomePage from '../pages/home/HomePage'
 import ProfilePage from '../pages/profile/ProfilePage'
+import WishlistPage from '../pages/wishlist/WishlistPage'
 
 // Khai báo route tập trung. Route cha <Layout> render navbar chung,
 // các trang con hiện vào vị trí <Outlet/> bên trong Layout.
@@ -74,6 +75,15 @@ export default function AppRoutes() {
           element={
             <RequireAuth>
               <OrderDetailPage />
+            </RequireAuth>
+          }
+        />
+        {/* Sách yêu thích (Phase 8) — dữ liệu riêng của user */}
+        <Route
+          path="/wishlist"
+          element={
+            <RequireAuth>
+              <WishlistPage />
             </RequireAuth>
           }
         />

@@ -16,6 +16,12 @@ export async function detail(req: Request, res: Response) {
   res.json({ success: true, data: book });
 }
 
+// Sách liên quan (Phase 8) — public, hiện dưới trang chi tiết
+export async function related(req: Request, res: Response) {
+  const books = await bookService.getRelatedBooks(String(req.params.slug));
+  res.json({ success: true, data: books });
+}
+
 // GET /api/books/batch?ids=1,2,3 — lấy nhiều sách theo id cho guest cart.
 // Parse thủ công: tách dấu phẩy, chỉ giữ số nguyên dương, cap 50 id (giỏ tối đa ~50 dòng);
 // giá trị rác bị lọc êm thay vì 400 — id không tồn tại đơn giản là vắng mặt trong kết quả

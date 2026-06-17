@@ -49,6 +49,9 @@ export default function Navbar() {
                 <Link to="/orders">Đơn hàng của tôi</Link>
               </li>
               <li>
+                <Link to="/wishlist">Sách yêu thích</Link>
+              </li>
+              <li>
                 <Link to="/profile">Tài khoản của tôi</Link>
               </li>
               <li>

@@ -4,6 +4,10 @@ import { Link, useParams } from 'react-router-dom'
 import { fetchBookBySlug } from '../../api/books'
 import { getApiErrorMessage } from '../../api/client'
 import CoverImage from '../../features/catalog/CoverImage'
+import RelatedBooks from '../../features/catalog/RelatedBooks'
+import ReviewsSection from '../../features/catalog/ReviewsSection'
+import Stars from '../../features/catalog/Stars'
+import WishlistButton from '../../features/catalog/WishlistButton'
 import { useCart } from '../../hooks/useCart'
 import { formatPrice } from '../../lib/format'
 
@@ -107,16 +111,19 @@ export default function BookDetailPage() {
   return (
     <div className="max-w-5xl mx-auto p-4">
       <div className="card lg:card-side bg-base-100 shadow">
-        <figure className="lg:w-80 shrink-0 p-6">
+        <figure className="lg:w-80 shrink-0 p-6 relative">
           <CoverImage
             url={book.cover_image_url}
             title={book.title}
             className="w-full aspect-[2/3] rounded-box"
           />
+          <WishlistButton bookId={book.id} className="absolute top-8 right-8" />
         </figure>
 
         <div className="card-body space-y-2">
           <h1 className="card-title text-2xl">{book.title}</h1>
+
+          <Stars value={book.avg_rating} count={book.review_count} />
 
           <p>
             Tác giả:{' '}
@@ -168,6 +175,9 @@ export default function BookDetailPage() {
           )}
         </div>
       </div>
+
+      <ReviewsSection bookId={book.id} />
+      <RelatedBooks slug={book.slug} />
     </div>
   )
 }

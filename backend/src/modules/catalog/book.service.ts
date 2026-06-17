@@ -14,6 +14,8 @@ export const bookCardSelect = {
   price: true,
   stock_quantity: true,
   cover_image_url: true,
+  avg_rating: true, // Phase 8: hiện sao trên thẻ sách
+  review_count: true,
   author: { select: { id: true, name: true } },
 } satisfies Prisma.BookSelect;
 
@@ -93,6 +95,31 @@ export async function getBookBySlug(slug: string) {
 
   // Làm phẳng bảng junction: [{book_id, category_id, category: {...}}] → [{id, name, slug}]
   return { ...book, categories: book.categories.map((bc) => bc.category) };
+}
+
+// Sách "liên quan" (Phase 8 — recommend KHÔNG collaborative filtering, D59):
+// cùng tác giả HOẶC chung ít nhất 1 thể loại, loại chính nó, chỉ sách đang bán, tối đa 6.
+export async function getRelatedBooks(slug: string) {
+  const book = await prisma.book.findFirst({
+    where: { slug, is_active: true },
+    select: { id: true, author_id: true, categories: { select: { category_id: true } } },
+  });
+  if (!book) return [];
+
+  const categoryIds = book.categories.map((c) => c.category_id);
+  return prisma.book.findMany({
+    where: {
+      is_active: true,
+      id: { not: book.id }, // không gợi ý chính nó
+      OR: [
+        { author_id: book.author_id },
+        { categories: { some: { category_id: { in: categoryIds } } } },
+      ],
+    },
+    orderBy: { created_at: 'desc' },
+    take: 6,
+    select: bookCardSelect, // đã gồm avg_rating/review_count
+  });
 }
 
 // ---------- Phần admin (các hàm dưới đây chỉ được gọi sau auth + adminOnly) ----------

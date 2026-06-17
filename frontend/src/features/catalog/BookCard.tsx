@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import type { BookCardData } from '../../api/books'
 import { formatPrice } from '../../lib/format'
 import CoverImage from './CoverImage'
+import Stars from './Stars'
+import WishlistButton from './WishlistButton'
 
 // Card sách dùng chung cho trang list, trang chủ và trang tác giả
 export default function BookCard({ book }: { book: BookCardData }) {
@@ -11,12 +13,14 @@ export default function BookCard({ book }: { book: BookCardData }) {
       className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
     >
       {/* aspect-[2/3]: giữ đúng tỷ lệ bìa sách dù ảnh gốc méo hay thiếu */}
-      <figure className="aspect-[2/3] w-full">
+      <figure className="aspect-[2/3] w-full relative">
         <CoverImage url={book.cover_image_url} title={book.title} className="w-full h-full" />
+        <WishlistButton bookId={book.id} className="absolute top-2 right-2" />
       </figure>
       <div className="card-body p-4 gap-1">
         <h3 className="font-semibold leading-snug line-clamp-2">{book.title}</h3>
         <p className="text-sm text-base-content/60">{book.author.name}</p>
+        {book.review_count > 0 && <Stars value={book.avg_rating} count={book.review_count} />}
         <div className="flex items-center justify-between mt-1">
           <span className="text-primary font-bold">{formatPrice(book.price)}</span>
           {book.stock_quantity === 0 && <span className="badge badge-error badge-sm">Hết hàng</span>}
