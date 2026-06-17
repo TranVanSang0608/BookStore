@@ -87,6 +87,12 @@ Gom nhiều thao tác DB thành MỘT khối "được ăn cả, ngã về khôn
 **Index**
 "Mục lục" giúp DB tìm dữ liệu nhanh thay vì dò từng dòng. _Ví dụ: mục lục cuối sách để tra trang, khỏi lật từng trang._
 
+**Aggregate / groupBy (gom nhóm + tính tổng)**
+`aggregate` = bảo DB tính giúp một con số tổng hợp (tổng tiền, đếm số dòng, trung bình). `groupBy` = gom các dòng theo một cột rồi tính cho từng nhóm. _Ví dụ: từ sổ bán hàng, "tổng doanh thu" = aggregate; "mỗi loại sách bán được bao nhiêu" = groupBy theo loại._ Đồ án (dashboard Phase 9): đếm đơn theo trạng thái, top sách bán chạy đều dùng `groupBy`.
+
+**date_trunc (cắt ngày theo tháng/ngày)**
+Hàm của PostgreSQL gom mọi mốc thời gian trong cùng một tháng (hoặc ngày) về một mốc chung, để cộng số liệu theo tháng. _Ví dụ: xếp mọi hóa đơn trong tháng 6 vào chung một ngăn "tháng 6" rồi cộng lại._ Đồ án: biểu đồ doanh thu theo tháng (Prisma `groupBy` không cắt ngày được nên dùng câu SQL thô `$queryRaw`).
+
 ---
 
 ## D. Bảo mật & đăng nhập
@@ -121,6 +127,12 @@ Chuỗi bí mật ngẫu nhiên nhúng trong link gửi qua email (xác thực e
 
 **localStorage**
 Ngăn lưu trữ nhỏ ngay trong trình duyệt, tắt mở lại vẫn còn. _Ví dụ: ngăn kéo cá nhân trên máy bạn._ Đồ án: lưu token đăng nhập + giỏ hàng của khách chưa đăng nhập.
+
+**OAuth / "Đăng nhập với Google"**
+Cách đăng nhập web bằng tài khoản sẵn có ở Google, không cần tạo mật khẩu riêng. Google xác minh hộ bạn là ai rồi báo cho web. _Ví dụ: vào quán dùng thẻ thành viên của siêu thị bên cạnh thay vì làm thẻ mới._ Đồ án (Phase 9): user bấm nút Google, web nhận và kiểm tra rồi cấp "vé" (JWT) của chính mình.
+
+**ID token (Google)**
+Một tấm "giấy chứng nhận" do Google KÝ, ghi email + tên của bạn. Vì có chữ ký Google, web kiểm tra được nó là thật, không ai giả mạo. _Ví dụ: bằng lái xe có dấu mộc nhà nước — nhìn mộc là tin._ Đồ án: FE lấy ID token từ Google rồi gửi lên BE; BE **verify chữ ký** trước khi tin (không tin email FE gửi trơn).
 
 ---
 

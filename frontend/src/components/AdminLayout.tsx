@@ -8,6 +8,12 @@ export default function AdminLayout() {
       <ul className="menu bg-base-100 rounded-box shadow w-48 shrink-0">
         <li className="menu-title">Quản trị</li>
         <li>
+          {/* `end` để chỉ active khi đúng /admin (không active khi ở /admin/orders...) */}
+          <NavLink to="/admin" end>
+            Tổng quan
+          </NavLink>
+        </li>
+        <li>
           <NavLink to="/admin/orders">Đơn hàng</NavLink>
         </li>
         <li>

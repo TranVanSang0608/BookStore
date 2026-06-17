@@ -14,6 +14,12 @@ export async function login(req: Request, res: Response) {
   res.json({ success: true, data: result });
 }
 
+// Public: đăng nhập/đăng ký bằng Google — nhận ID token (credential) từ FE.
+export async function googleLogin(req: Request, res: Response) {
+  const result = await authService.loginWithGoogle(req.body.credential);
+  res.json({ success: true, data: result });
+}
+
 // Public: FE gửi token (lấy từ link email) để xác thực email.
 export async function verifyEmail(req: Request, res: Response) {
   const result = await authService.verifyEmail(req.body.token);

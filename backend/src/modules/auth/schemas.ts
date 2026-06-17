@@ -18,6 +18,11 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Mật khẩu không được để trống'),
 });
 
+// Đăng nhập Google (D60) — FE gửi ID token (credential) lấy từ Google Identity Services
+export const googleLoginSchema = z.object({
+  credential: z.string().min(1, 'Thiếu credential từ Google'),
+});
+
 // Token xác thực email — chuỗi gửi trong link, FE gửi lại để xác thực
 export const verifyEmailSchema = z.object({
   token: z.string().min(1, 'Thiếu mã xác thực'),
@@ -37,6 +42,7 @@ export const resetPasswordSchema = z.object({
 // Suy ra type TypeScript từ chính schema — sửa rule là type tự cập nhật theo
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

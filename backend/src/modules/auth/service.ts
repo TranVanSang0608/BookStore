@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { createEmailToken, consumeEmailToken } from '../../lib/email-token';
+import { verifyGoogleIdToken } from '../../lib/google';
 import { signToken } from '../../lib/jwt';
 import { logger } from '../../lib/logger';
 import { prisma } from '../../lib/prisma';
@@ -7,6 +8,11 @@ import { AppError } from '../../middleware/error';
 import { PUBLIC_USER_SELECT } from '../../utils/publicUser';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../notification/auth-email';
 import type { LoginInput, RegisterInput } from './schemas';
+
+// P2002 = vi phạm ràng buộc unique của Prisma (ở đây là User.email khi 2 request cùng tạo)
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code: unknown }).code === 'P2002';
+}
 
 export async function register(input: RegisterInput) {
   // Normalize email: Postgres unique phân biệt hoa/thường, không normalize thì
@@ -96,6 +102,62 @@ export async function resetPassword(rawToken: string, newPassword: string) {
   const password_hash = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({ where: { id: userId }, data: { password_hash } });
   return { reset: true };
+}
+
+// Đăng nhập/đăng ký bằng Google (D60). FE gửi ID token (credential) lấy từ Google
+// Identity Services; ở đây verify token rồi tìm-hoặc-tạo user, cấp JWT của hệ thống mình
+// — trả về CÙNG shape { user, token } như login() để FE tái dùng nguyên flow đăng nhập.
+export async function loginWithGoogle(credential: string) {
+  // Thiếu cấu hình GOOGLE_CLIENT_ID là lỗi HỆ THỐNG (deploy sai), KHÔNG phải lỗi của user.
+  // Kiểm tra TRƯỚC try để lỗi này bubble thành 500 thật, không bị nuốt thành 401 ở dưới.
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    throw new AppError(500, 'Server chưa cấu hình đăng nhập Google (GOOGLE_CLIENT_ID)');
+  }
+
+  let profile;
+  try {
+    profile = await verifyGoogleIdToken(credential);
+  } catch (err) {
+    // Token giả/hết hạn/sai audience → coi như đăng nhập thất bại (không lộ chi tiết)
+    logger.warn('Xác minh Google ID token thất bại', { err });
+    throw new AppError(401, 'Đăng nhập Google thất bại, vui lòng thử lại');
+  }
+
+  // Google báo email CHƯA xác minh → TỪ CHỐI. Vì hệ thống link tài khoản theo email, nếu tin
+  // email chưa verify thì kẻ xấu có thể đăng nhập bằng email người khác để chiếm/link nhầm tài khoản.
+  if (!profile.email_verified) {
+    throw new AppError(401, 'Email Google của bạn chưa được xác minh');
+  }
+
+  // Normalize email giống register/login (Postgres unique phân biệt hoa/thường)
+  const email = profile.email.trim().toLowerCase();
+
+  // Nhận diện user bằng email — an toàn vì Google đã xác minh quyền sở hữu email (đã chặn ở trên).
+  // KHÔNG lưu google_id riêng: nếu sau này cần phân biệt nhà cung cấp thì thêm cột (NICE).
+  let user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user) {
+    // Tài khoản OAuth: password_hash = null (login bằng mật khẩu & forgot-password đã chặn
+    // sẵn nhánh này từ Phase 1/6). email_verified = true vì Google đã xác minh.
+    try {
+      user = await prisma.user.create({
+        data: { email, name: profile.name, password_hash: null, email_verified: true },
+      });
+    } catch (err) {
+      // Race: 2 request đầu tiên cùng email chạy song song → 1 create thắng, request này
+      // dính unique (P2002). Thay vì 500, đọc lại user mà request kia vừa tạo.
+      if (!isUniqueViolation(err)) throw err;
+      user = await prisma.user.findUnique({ where: { email } });
+      if (!user) throw err; // không phải race thật → ném lại lỗi gốc
+    }
+  } else if (!user.email_verified) {
+    // User đã có (từng đăng ký bằng email/mật khẩu) nhưng chưa verify → Google verify hộ
+    user = await prisma.user.update({ where: { id: user.id }, data: { email_verified: true } });
+  }
+
+  const token = signToken({ sub: user.id, role: user.role });
+  const { password_hash: _ignored, ...publicUser } = user;
+  return { user: publicUser, token };
 }
 
 export async function login(input: LoginInput) {

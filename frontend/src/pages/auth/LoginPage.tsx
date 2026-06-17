@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
+import GoogleLoginButton from '../../components/GoogleLoginButton'
 import { useAuth } from '../../hooks/useAuth'
 import { loginFormSchema, zodErrorsToMap } from '../../lib/validation'
 
@@ -86,6 +87,9 @@ export default function LoginPage() {
               Đăng nhập
             </button>
           </form>
+
+          <div className="divider text-sm">hoặc</div>
+          <GoogleLoginButton from={from} />
 
           <p className="text-sm text-center mt-2">
             <Link to="/forgot-password" className="link">

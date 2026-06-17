@@ -9,6 +9,7 @@ import authorRoutes from './modules/catalog/author.routes';
 import bookRoutes from './modules/catalog/book.routes';
 import categoryRoutes from './modules/catalog/category.routes';
 import cartRoutes from './modules/cart/routes';
+import dashboardRoutes from './modules/dashboard/routes';
 import orderRoutes from './modules/order/routes';
 import paymentRoutes from './modules/payment/routes';
 import healthRoutes from './modules/health/routes';
@@ -60,6 +61,8 @@ app.use('/api/vouchers', voucherRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 // Review (Phase 8): đánh giá sách (verified purchase), list public
 app.use('/api/reviews', reviewRoutes);
+// Dashboard (Phase 9): số liệu tổng quan cho admin (KPI + chart)
+app.use('/api/admin/dashboard', dashboardRoutes);
 
 // Error handler PHẢI đăng ký sau cùng để hứng lỗi từ mọi route phía trên
 app.use(errorHandler);

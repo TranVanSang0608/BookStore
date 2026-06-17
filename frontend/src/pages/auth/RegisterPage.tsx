@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
+import GoogleLoginButton from '../../components/GoogleLoginButton'
 import { useAuth } from '../../hooks/useAuth'
 import { registerFormSchema, zodErrorsToMap } from '../../lib/validation'
 
@@ -97,6 +98,9 @@ export default function RegisterPage() {
               Đăng ký
             </button>
           </form>
+
+          <div className="divider text-sm">hoặc</div>
+          <GoogleLoginButton from="/" />
 
           <p className="text-sm text-center mt-2">
             Đã có tài khoản?{' '}

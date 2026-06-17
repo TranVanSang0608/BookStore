@@ -775,4 +775,69 @@ Hoãn (chấp nhận đồ án): Stars làm tròn sao nguyên (MI5); `ApiRespons
 
 ---
 
-*(Phase 9+ NICE hoặc Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*
+## Phase 9 — Google OAuth + Admin Dashboard (2026-06-17)
+
+### Mục tiêu phase
+
+Hai tính năng NICE độc lập: (1) đăng nhập/đăng ký bằng **Google**, (2) trang **tổng quan admin**
+với KPI + 3 biểu đồ. **Không cần migration** — `User.password_hash` đã nullable từ Phase 0 cho
+tài khoản OAuth; dashboard chỉ ĐỌC dữ liệu sẵn có.
+
+### Đã làm
+
+| Phần | Nội dung | Kết quả xác minh |
+|---|---|---|
+| BE OAuth | `lib/google.ts` verify ID token (google-auth-library); `loginWithGoogle` tìm-hoặc-tạo user; `POST /api/auth/google` | 4 unit test (tạo user mới, login user cũ không trùng, bật email_verified, token sai → 401) |
+| FE OAuth | `googleLoginApi`, `GoogleLoginButton` (script GSI, tự chứa), nhúng Login + Register | Browser: trang login hiện divider "hoặc" + nút Google; thiếu Client ID → fallback "Chưa cấu hình..." êm |
+| BE Dashboard | module `dashboard/`: KPI (aggregate/count), doanh thu/tháng ($queryRaw date_trunc), top sách (groupBy), đơn theo trạng thái (groupBy); `GET /api/admin/dashboard` (adminOnly) | 2 unit test (gộp đúng shape + đổi BigInt→number; rỗng → 0/[]) |
+| FE Dashboard | `recharts`, `api/dashboard`, `AdminDashboardPage` (stats + Bar + Bar ngang + Pie), link sidebar "Tổng quan", `/admin` index → dashboard | Browser: đăng nhập admin → KPI đúng (doanh thu 730.000đ, 3 đơn, totalUsers=1 với data demo), **5 SVG chart render**, console sạch; xóa data demo sau verify |
+
+**207 unit test BE xanh, FE build + lint xanh.**
+
+### Quyết định mới trong phase (chi tiết: THIET-KE.md mục 10)
+
+- **D60** — Google OAuth bằng **Google Identity Services + verify ID token ở backend** (PIVOT từ
+  Passport.js trong thiết kế gốc D6). Hợp mô hình SPA + JWT localStorage: không session, không
+  redirect URI callback; tái dùng nguyên `login()` shape `{ user, token }`.
+- **D61** — Dashboard tính trực tiếp bằng aggregate/groupBy, 1 endpoint gộp, vẽ bằng Recharts;
+  doanh thu/tháng dùng `$queryRaw date_trunc` (Prisma groupBy không cắt ngày được).
+
+### Khái niệm cần hiểu để bảo vệ
+
+**Google OAuth (D60):**
+
+1. **Vì sao BE phải VERIFY lại ID token** — FE chạy trên máy người dùng, có thể bị sửa; nếu BE tin
+   thẳng email FE gửi thì ai cũng giả được "tôi là admin@...". ID token có **chữ ký của Google**
+   (`google-auth-library` tải public key Google để kiểm) + kiểm `audience` (token phát đúng cho client
+   id của ta) → chỉ token Google thật mới qua được. Cùng tinh thần "server không tin client" (Phase 1).
+2. **Tài khoản OAuth có `password_hash = null`** — login bằng mật khẩu (`!user?.password_hash → 401`)
+   và forgot-password (chỉ gửi khi có password_hash) đã chặn sẵn nhánh này từ Phase 1/6 → không cần
+   sửa gì. Tài khoản chỉ-Google thì chỉ đăng nhập bằng Google (chấp nhận cho MVP).
+3. **Link theo email đã verify** — nếu email Google trùng tài khoản email/mật khẩu cũ thì ĐĂNG NHẬP vào
+   đúng tài khoản đó (không tạo trùng), và bật `email_verified=true` vì Google đã xác minh hộ. An toàn
+   vì Google chỉ cấp token cho người thật sự sở hữu email.
+4. **GoogleLoginButton tránh stale closure** — callback của Google chạy NGOÀI React; lưu handler mới
+   nhất vào `useRef` (cập nhật trong effect, không trong thân render) để không bắt nhầm giá trị cũ.
+
+**Dashboard (D61):**
+
+5. **Doanh thu chỉ tính đơn `Delivered`** — đơn chưa giao/đã hủy chưa phải tiền thật (COD thu tiền lúc
+   giao — D43). "Đơn cần xử lý" = Pending + Confirmed (đang chờ admin thao tác).
+6. **Top sách lấy `book_title` SNAPSHOT trong OrderItem** — gom theo cột snapshot có sẵn tên → khỏi
+   join bảng Book (đúng tinh thần SNAPSHOT D25); loại đơn Cancelled.
+7. **Doanh thu/tháng phải dùng `$queryRaw`** — Prisma `groupBy` chỉ gom theo giá trị cột nguyên vẹn,
+   KHÔNG cắt được ngày về "tháng". `date_trunc('month', placed_at)` của Postgres làm việc đó; `SUM`
+   trả về **BigInt** nên phải đổi sang `number` mới JSON serialize được.
+8. **Số liệu tính trực tiếp mỗi lần gọi** — data đồ án nhỏ; không cần bảng thống kê tính sẵn/cron
+   (đó là tối ưu khi data lớn — biết và nói được "chưa cần vì YAGNI" là điểm cộng).
+
+### Việc còn treo
+
+- Cần Client ID thật (Google Cloud Console) để nút Google chạy — đã ghi rõ trong `.env.example`
+  (cả `GOOGLE_CLIENT_ID` backend lẫn `VITE_GOOGLE_CLIENT_ID` frontend là CÙNG một Client ID).
+- Tài khoản chỉ-Google không có cách đặt mật khẩu để đăng nhập thường (chấp nhận cho MVP).
+- Bundle FE > 500kB sau khi thêm Recharts (cảnh báo Vite) — code-split là tối ưu NICE, chưa cần.
+
+---
+
+*(Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*

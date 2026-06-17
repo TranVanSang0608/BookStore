@@ -39,6 +39,13 @@ export async function loginApi(input: { email: string; password: string }): Prom
   return data.data
 }
 
+// Đăng nhập Google (D60): gửi ID token (credential) lấy từ Google Identity Services;
+// backend verify rồi trả về { user, token } CÙNG shape login → tái dùng nguyên flow login()
+export async function googleLoginApi(credential: string): Promise<AuthData> {
+  const { data } = await apiClient.post<ApiResponse<AuthData>>('/auth/google', { credential })
+  return data.data
+}
+
 // ----- Phase 6: xác thực email + quên/đặt lại mật khẩu -----
 
 // Xác thực email bằng token lấy từ link trong email

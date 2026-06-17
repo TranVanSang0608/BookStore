@@ -1,9 +1,12 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { Route, Routes } from 'react-router-dom'
 import AdminLayout from '../components/AdminLayout'
 import Layout from '../components/Layout'
 import RequireAdmin from '../components/RequireAdmin'
 import RequireAuth from '../components/RequireAuth'
 import AdminAuthorsPage from '../pages/admin/AdminAuthorsPage'
+// Lazy-load dashboard: Recharts khá nặng → tách thành chunk riêng, chỉ tải khi admin mở /admin
+const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'))
 import AdminBookFormPage from '../pages/admin/AdminBookFormPage'
 import AdminBooksPage from '../pages/admin/AdminBooksPage'
 import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage'
@@ -98,7 +101,15 @@ export default function AppRoutes() {
             </RequireAdmin>
           }
         >
-          <Route index element={<Navigate to="/admin/orders" replace />} />
+          {/* Trang chủ khu admin là dashboard tổng quan (Phase 9) — lazy nên bọc Suspense */}
+          <Route
+            index
+            element={
+              <Suspense fallback={<span className="loading loading-spinner" />}>
+                <AdminDashboardPage />
+              </Suspense>
+            }
+          />
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="orders/:id" element={<AdminOrderDetailPage />} />
           <Route path="books" element={<AdminBooksPage />} />
