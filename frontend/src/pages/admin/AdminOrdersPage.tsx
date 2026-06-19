@@ -26,9 +26,9 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="card bg-base-100 shadow">
+    <div className="card bg-base-100 border border-base-300">
       <div className="card-body space-y-4">
-        <h1 className="card-title">Quản lý đơn hàng {data && `(${data.total})`}</h1>
+        <h1 className="card-title font-serif">Quản lý đơn hàng {data && `(${data.total})`}</h1>
 
         <div className="flex flex-wrap gap-2 items-center">
           <form onSubmit={handleSearch} className="flex gap-2">

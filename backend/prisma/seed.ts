@@ -12,6 +12,7 @@ import bcrypt from 'bcrypt';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PrismaClient } from '../src/generated/prisma/client';
+import type { OrderStatus } from '../src/generated/prisma/client';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -198,6 +199,176 @@ async function seedVouchers() {
   console.log(`✔ Voucher: ${vouchers.length} mã mẫu (WELCOME10 10% trần 50k / SALE20K -20k đơn từ 200k)`);
 }
 
+// ---------- 6. Dữ liệu demo: khách hàng + đơn hàng + review ----------
+// MỤC ĐÍCH: để khối "Bán chạy" (xếp theo lượng bán đơn Delivered) và sao đánh giá trên
+// thẻ sách CÓ DỮ LIỆU THẬT khi demo trước hội đồng — không khối nào hiển thị rỗng/bịa.
+// IDEMPOTENT: user upsert theo email; đơn BỎ QUA nếu order_code đã có; review upsert theo (user,book).
+// CỐ Ý KHÔNG: seed ảnh bìa (ảnh thật upload qua admin) + KHÔNG trừ stock (giữ idempotent;
+// bestseller chỉ đếm quantity trong OrderItem nên không phụ thuộc stock).
+
+const DEMO_PASSWORD = 'Demo@123';
+
+const DEMO_CUSTOMERS = [
+  { email: 'khach1@bookstore.vn', name: 'Lan Phương', city: 'Hồ Chí Minh' },
+  { email: 'khach2@bookstore.vn', name: 'Minh Quân', city: 'Hà Nội' },
+];
+
+// Đơn demo: 5 Delivered (nuôi "Bán chạy") + 1 Shipping + 1 Pending (cho đủ trạng thái).
+// daysAgo: đặt placed_at lùi về quá khứ để biểu đồ doanh thu/tháng có dữ liệu rải đều.
+const DEMO_ORDERS: {
+  code: string;
+  customer: string;
+  status: OrderStatus;
+  daysAgo: number;
+  items: { slug: string; qty: number }[];
+}[] = [
+  { code: 'BK-DEMO-0001', customer: 'khach1@bookstore.vn', status: 'Delivered', daysAgo: 40, items: [{ slug: 'dac-nhan-tam', qty: 5 }, { slug: 'nha-gia-kim', qty: 3 }, { slug: 'mat-biec', qty: 2 }] },
+  { code: 'BK-DEMO-0002', customer: 'khach2@bookstore.vn', status: 'Delivered', daysAgo: 30, items: [{ slug: 'dac-nhan-tam', qty: 4 }, { slug: 'tuoi-tre-dang-gia-bao-nhieu', qty: 3 }, { slug: 'sapiens-luoc-su-loai-nguoi', qty: 2 }] },
+  { code: 'BK-DEMO-0003', customer: 'khach1@bookstore.vn', status: 'Delivered', daysAgo: 20, items: [{ slug: 'nha-gia-kim', qty: 4 }, { slug: 'tuoi-tre-dang-gia-bao-nhieu', qty: 3 }, { slug: 'toi-thay-hoa-vang-tren-co-xanh', qty: 2 }] },
+  { code: 'BK-DEMO-0004', customer: 'khach2@bookstore.vn', status: 'Delivered', daysAgo: 12, items: [{ slug: 'dac-nhan-tam', qty: 3 }, { slug: 'nha-gia-kim', qty: 2 }, { slug: 'cho-toi-xin-mot-ve-di-tuoi-tho', qty: 2 }, { slug: 'mat-biec', qty: 3 }] },
+  { code: 'BK-DEMO-0005', customer: 'khach1@bookstore.vn', status: 'Delivered', daysAgo: 7, items: [{ slug: 'sapiens-luoc-su-loai-nguoi', qty: 4 }, { slug: 'tuoi-tre-dang-gia-bao-nhieu', qty: 2 }, { slug: 'de-men-phieu-luu-ky', qty: 3 }, { slug: 'cho-toi-xin-mot-ve-di-tuoi-tho', qty: 2 }] },
+  { code: 'BK-DEMO-0006', customer: 'khach1@bookstore.vn', status: 'Shipping', daysAgo: 3, items: [{ slug: 'homo-deus-luoc-su-tuong-lai', qty: 1 }, { slug: 'veronika-quyet-chet', qty: 1 }] },
+  { code: 'BK-DEMO-0007', customer: 'khach2@bookstore.vn', status: 'Pending', daysAgo: 1, items: [{ slug: 'quang-ganh-lo-di-va-vui-song', qty: 2 }] },
+];
+
+// Review demo — mỗi dòng PHẢI ứng với 1 đơn Delivered chứa sách đó (verified purchase D5).
+const DEMO_REVIEWS = [
+  { customer: 'khach1@bookstore.vn', slug: 'dac-nhan-tam', rating: 5, comment: 'Sách kỹ năng kinh điển, áp dụng được ngay vào giao tiếp hằng ngày.' },
+  { customer: 'khach1@bookstore.vn', slug: 'nha-gia-kim', rating: 5, comment: 'Truyền cảm hứng theo đuổi ước mơ, đọc một mạch không dừng được.' },
+  { customer: 'khach1@bookstore.vn', slug: 'mat-biec', rating: 4, comment: 'Văn Nguyễn Nhật Ánh nhẹ nhàng mà buồn man mác.' },
+  { customer: 'khach1@bookstore.vn', slug: 'sapiens-luoc-su-loai-nguoi', rating: 5, comment: 'Góc nhìn lớn và mạch lạc về lịch sử loài người.' },
+  { customer: 'khach2@bookstore.vn', slug: 'dac-nhan-tam', rating: 4, comment: 'Nhiều lời khuyên hữu ích, vài ví dụ hơi cũ nhưng vẫn đáng đọc.' },
+  { customer: 'khach2@bookstore.vn', slug: 'tuoi-tre-dang-gia-bao-nhieu', rating: 5, comment: 'Rất hợp với các bạn trẻ đang loay hoay tìm hướng đi.' },
+  { customer: 'khach2@bookstore.vn', slug: 'nha-gia-kim', rating: 5, comment: 'Một câu chuyện đẹp về việc lắng nghe trái tim mình.' },
+  { customer: 'khach2@bookstore.vn', slug: 'sapiens-luoc-su-loai-nguoi', rating: 4, comment: 'Kiến thức bổ ích, hơi dày nhưng cuốn.' },
+];
+
+async function seedDemoData() {
+  // --- 6a. Khách hàng demo + địa chỉ mặc định ---
+  const password_hash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  const customerIds = new Map<string, number>();
+
+  for (const c of DEMO_CUSTOMERS) {
+    const user = await prisma.user.upsert({
+      where: { email: c.email },
+      update: {}, // đã có thì giữ nguyên (không reset mỗi lần seed)
+      create: { email: c.email, password_hash, name: c.name, role: 'user', email_verified: true },
+    });
+    customerIds.set(c.email, user.id);
+
+    // Address không có cột unique → guard bằng "đã có địa chỉ chưa" để khỏi tạo trùng
+    const hasAddress = await prisma.address.findFirst({ where: { user_id: user.id } });
+    if (!hasAddress) {
+      const province = await prisma.province.findFirst({
+        where: { name: { contains: c.city } },
+        include: { wards: { take: 1 } },
+      });
+      if (province && province.wards[0]) {
+        await prisma.address.create({
+          data: {
+            user_id: user.id,
+            recipient_name: c.name,
+            phone: '0900000000',
+            province_code: province.code,
+            ward_code: province.wards[0].code,
+            province_name: province.name,
+            ward_name: province.wards[0].name,
+            street_detail: 'Số 1 Đường Sách',
+            is_default: true,
+          },
+        });
+      }
+    }
+  }
+  console.log(`✔ Khách demo: ${DEMO_CUSTOMERS.length} (mật khẩu chung: ${DEMO_PASSWORD})`);
+
+  // --- 6b. Đơn hàng demo (snapshot từ giá HIỆN TẠI — đủ cho demo) ---
+  const books = await prisma.book.findMany({ include: { author: true } });
+  const bookBySlug = new Map(books.map((b) => [b.slug, b]));
+  const isBigCity = (name: string) => name.includes('Hà Nội') || name.includes('Hồ Chí Minh');
+
+  let createdOrders = 0;
+  for (const o of DEMO_ORDERS) {
+    // Idempotent: đã có order_code này thì bỏ qua cả đơn lẫn các dòng hàng của nó
+    if (await prisma.order.findUnique({ where: { order_code: o.code } })) continue;
+
+    const userId = customerIds.get(o.customer)!;
+    const address = await prisma.address.findFirst({ where: { user_id: userId } });
+    if (!address) continue;
+
+    const lines = o.items
+      .map(({ slug, qty }) => ({ book: bookBySlug.get(slug), qty }))
+      .filter((l): l is { book: (typeof books)[number]; qty: number } => l.book !== undefined);
+
+    // Tiền tính giống createOrder: subtotal từ giá DB, free ship từ 300k (khớp seedShippingZones)
+    const subtotal = lines.reduce((s, l) => s + l.book.price * l.qty, 0);
+    const shipping_fee = subtotal >= 300_000 ? 0 : isBigCity(address.province_name) ? 20_000 : 35_000;
+
+    await prisma.order.create({
+      data: {
+        order_code: o.code,
+        user_id: userId,
+        status: o.status,
+        subtotal,
+        shipping_fee,
+        discount_amount: 0,
+        total: subtotal + shipping_fee,
+        placed_at: new Date(Date.now() - o.daysAgo * 24 * 60 * 60 * 1000),
+        shipping_recipient_name: address.recipient_name,
+        shipping_phone: address.phone,
+        shipping_province_name: address.province_name,
+        shipping_ward_name: address.ward_name,
+        shipping_street: address.street_detail,
+        // Snapshot từng dòng hàng (giống createOrder) — bìa hiện null, sẽ có khi upload ảnh thật
+        items: {
+          create: lines.map((l) => ({
+            book_id: l.book.id,
+            book_title: l.book.title,
+            book_author_name: l.book.author.name,
+            price_at_order: l.book.price,
+            cover_image_url_snapshot: l.book.cover_image_url,
+            quantity: l.qty,
+          })),
+        },
+      },
+    });
+    createdOrders++;
+  }
+  console.log(`✔ Đơn demo: +${createdOrders} đơn mới / ${DEMO_ORDERS.length} định nghĩa (5 Delivered + 1 Shipping + 1 Pending)`);
+
+  // --- 6c. Review (chỉ ghi nếu THẬT SỰ có đơn Delivered chứa sách — đúng verified purchase) ---
+  let reviewCount = 0;
+  const affectedBookIds = new Set<number>();
+  for (const r of DEMO_REVIEWS) {
+    const userId = customerIds.get(r.customer)!;
+    const book = bookBySlug.get(r.slug);
+    if (!book) continue;
+
+    const purchased = await prisma.order.findFirst({
+      where: { user_id: userId, status: 'Delivered', items: { some: { book_id: book.id } } },
+    });
+    if (!purchased) continue; // an toàn: không có đơn Delivered thì bỏ qua, không tạo review "ảo"
+
+    await prisma.review.upsert({
+      where: { user_id_book_id: { user_id: userId, book_id: book.id } },
+      update: { rating: r.rating, comment: r.comment },
+      create: { user_id: userId, book_id: book.id, rating: r.rating, comment: r.comment },
+    });
+    affectedBookIds.add(book.id);
+    reviewCount++;
+  }
+
+  // Tính lại avg_rating + review_count denormalized lên Book (giống recomputeBookRating của review service)
+  for (const bookId of affectedBookIds) {
+    const agg = await prisma.review.aggregate({ where: { book_id: bookId }, _avg: { rating: true }, _count: true });
+    await prisma.book.update({
+      where: { id: bookId },
+      data: { avg_rating: agg._avg.rating ?? 0, review_count: agg._count },
+    });
+  }
+  console.log(`✔ Review demo: ${reviewCount} review (cập nhật sao cho ${affectedBookIds.size} sách)`);
+}
+
 // ---------- main ----------
 
 async function main() {
@@ -206,6 +377,7 @@ async function main() {
   await seedAdmin();
   await seedCatalog();
   await seedVouchers();
+  await seedDemoData();
 }
 
 main()

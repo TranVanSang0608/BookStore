@@ -46,10 +46,10 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Tổng quan</h1>
+      <h1 className="font-serif text-2xl font-semibold text-base-content">Tổng quan</h1>
 
       {/* 4 thẻ KPI */}
-      <div className="stats stats-vertical sm:stats-horizontal shadow w-full">
+      <div className="stats stats-vertical sm:stats-horizontal border border-base-300 w-full">
         <div className="stat">
           <div className="stat-title">Doanh thu (đã giao)</div>
           <div className="stat-value text-success text-2xl">{formatPrice(kpi.revenue)}</div>
@@ -69,9 +69,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Doanh thu theo tháng */}
-      <div className="card bg-base-100 shadow">
+      <div className="card bg-base-100 border border-base-300">
         <div className="card-body">
-          <h2 className="card-title text-lg">Doanh thu theo tháng</h2>
+          <h2 className="card-title font-serif text-lg">Doanh thu theo tháng</h2>
           {revenueByMonth.every((m) => m.revenue === 0) ? (
             <p className="text-base-content/60 py-8 text-center">Chưa có đơn đã giao nào</p>
           ) : (
@@ -81,7 +81,7 @@ export default function AdminDashboardPage() {
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(v) => `${(Number(v) / 1000).toLocaleString('vi-VN')}k`} width={60} />
                 <Tooltip formatter={(v) => formatPrice(Number(v))} />
-                <Bar dataKey="revenue" name="Doanh thu" fill="#22c55e" />
+                <Bar dataKey="revenue" name="Doanh thu" fill="#3e5a39" />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -90,9 +90,9 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Top sách bán chạy */}
-        <div className="card bg-base-100 shadow">
+        <div className="card bg-base-100 border border-base-300">
           <div className="card-body">
-            <h2 className="card-title text-lg">Top sách bán chạy</h2>
+            <h2 className="card-title font-serif text-lg">Top sách bán chạy</h2>
             {topBooks.length === 0 ? (
               <p className="text-base-content/60 py-8 text-center">Chưa có dữ liệu bán hàng</p>
             ) : (
@@ -110,9 +110,9 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Đơn theo trạng thái */}
-        <div className="card bg-base-100 shadow">
+        <div className="card bg-base-100 border border-base-300">
           <div className="card-body">
-            <h2 className="card-title text-lg">Đơn theo trạng thái</h2>
+            <h2 className="card-title font-serif text-lg">Đơn theo trạng thái</h2>
             {ordersByStatus.length === 0 ? (
               <p className="text-base-content/60 py-8 text-center">Chưa có đơn hàng nào</p>
             ) : (

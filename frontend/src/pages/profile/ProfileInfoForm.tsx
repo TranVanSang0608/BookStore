@@ -29,9 +29,9 @@ export default function ProfileInfoForm() {
   }
 
   return (
-    <div className="card bg-base-100 shadow">
+    <div className="card bg-base-100 border border-base-300">
       <div className="card-body">
-        <h2 className="card-title">Thông tin tài khoản</h2>
+        <h2 className="card-title font-serif">Thông tin tài khoản</h2>
 
         {mutation.isSuccess && <div className="alert alert-success text-sm">Đã lưu thay đổi</div>}
         {mutation.isError && (

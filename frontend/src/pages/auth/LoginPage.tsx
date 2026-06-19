@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
+import AuthLayout from '../../components/AuthLayout'
 import GoogleLoginButton from '../../components/GoogleLoginButton'
 import { useAuth } from '../../hooks/useAuth'
 import { loginFormSchema, zodErrorsToMap } from '../../lib/validation'
@@ -42,69 +43,61 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="py-16 px-4">
-      <div className="card bg-base-100 shadow max-w-md mx-auto">
-        <div className="card-body">
-          <h1 className="card-title text-2xl">Đăng nhập</h1>
+    <AuthLayout title="Đăng nhập">
+      {mutation.isError && (
+        <div className="alert alert-error text-sm">{getApiErrorMessage(mutation.error)}</div>
+      )}
 
-          {mutation.isError && (
-            <div className="alert alert-error text-sm">{getApiErrorMessage(mutation.error)}</div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-            <div>
-              <label className="label" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                className="input input-bordered w-full"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              {fieldErrors.email && <p className="text-error text-sm mt-1">{fieldErrors.email}</p>}
-            </div>
-
-            <div>
-              <label className="label" htmlFor="password">
-                Mật khẩu
-              </label>
-              <input
-                id="password"
-                type="password"
-                className="input input-bordered w-full"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              {fieldErrors.password && (
-                <p className="text-error text-sm mt-1">{fieldErrors.password}</p>
-              )}
-            </div>
-
-            <button type="submit" className="btn btn-primary w-full" disabled={mutation.isPending}>
-              {mutation.isPending && <span className="loading loading-spinner loading-sm" />}
-              Đăng nhập
-            </button>
-          </form>
-
-          <div className="divider text-sm">hoặc</div>
-          <GoogleLoginButton from={from} />
-
-          <p className="text-sm text-center mt-2">
-            <Link to="/forgot-password" className="link">
-              Quên mật khẩu?
-            </Link>
-          </p>
-
-          <p className="text-sm text-center">
-            Chưa có tài khoản?{' '}
-            <Link to="/register" className="link link-primary">
-              Đăng ký ngay
-            </Link>
-          </p>
+      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+        <div>
+          <label className="label" htmlFor="email">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            className="input input-bordered w-full"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          {fieldErrors.email && <p className="text-error text-sm mt-1">{fieldErrors.email}</p>}
         </div>
-      </div>
-    </div>
+
+        <div>
+          <label className="label" htmlFor="password">
+            Mật khẩu
+          </label>
+          <input
+            id="password"
+            type="password"
+            className="input input-bordered w-full"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {fieldErrors.password && <p className="text-error text-sm mt-1">{fieldErrors.password}</p>}
+        </div>
+
+        <button type="submit" className="btn btn-primary w-full" disabled={mutation.isPending}>
+          {mutation.isPending && <span className="loading loading-spinner loading-sm" />}
+          Đăng nhập
+        </button>
+      </form>
+
+      <div className="divider text-sm">hoặc</div>
+      <GoogleLoginButton from={from} />
+
+      <p className="text-sm text-center mt-2">
+        <Link to="/forgot-password" className="link">
+          Quên mật khẩu?
+        </Link>
+      </p>
+
+      <p className="text-sm text-center">
+        Chưa có tài khoản?{' '}
+        <Link to="/register" className="link link-primary">
+          Đăng ký ngay
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

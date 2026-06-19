@@ -116,9 +116,8 @@ export default function ReviewsSection({ bookId }: { bookId: number }) {
   })
 
   return (
-    <div className="mt-8 space-y-3">
-      <h2 className="text-xl font-bold">Đánh giá{reviews ? ` (${reviews.total})` : ''}</h2>
-
+    <div className="space-y-4">
+      {/* Tiêu đề "Đánh giá (N)" đã nằm ở nhãn tab bên trang chi tiết → không lặp lại ở đây */}
       {!isLoggedIn && (
         <p className="text-sm text-base-content/60">Đăng nhập để đánh giá sách bạn đã mua.</p>
       )}
@@ -136,17 +135,24 @@ export default function ReviewsSection({ bookId }: { bookId: number }) {
       {reviews && reviews.items.length === 0 && (
         <p className="text-base-content/60">Chưa có đánh giá nào.</p>
       )}
-      <ul className="space-y-3">
+      <ul className="space-y-4">
         {reviews?.items.map((r) => (
-          <li key={r.id} className="border-b border-base-300 pb-3">
-            <div className="flex items-center gap-2 flex-wrap">
+          <li key={r.id} className="flex gap-3 border-b border-base-300 pb-4">
+            <span className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold shrink-0">
+              {r.user_name.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-sm">{r.user_name}</span>
+                <span className="text-xs text-base-content/50">
+                  {new Date(r.updated_at).toLocaleDateString('vi-VN')}
+                </span>
+              </div>
               <Stars value={r.rating} />
-              <span className="font-medium text-sm">{r.user_name}</span>
-              <span className="text-xs text-base-content/50">
-                {new Date(r.updated_at).toLocaleDateString('vi-VN')}
-              </span>
+              {r.comment && (
+                <p className="text-sm mt-1 whitespace-pre-line text-base-content/80">{r.comment}</p>
+              )}
             </div>
-            {r.comment && <p className="text-sm mt-1 whitespace-pre-line">{r.comment}</p>}
           </li>
         ))}
       </ul>

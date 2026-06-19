@@ -16,6 +16,13 @@ export const listBooksQuerySchema = z.object({
 
 export type ListBooksQuery = z.infer<typeof listBooksQuerySchema>;
 
+// GET /api/books/bestsellers?limit=10 — số sách bán chạy muốn lấy (1..20, mặc định 10)
+export const bestsellersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(20).catch(10),
+});
+
+export type BestsellersQuery = z.infer<typeof bestsellersQuerySchema>;
+
 // Bảng admin chỉ cần tìm theo tên + phân trang (không cần filter giá/thể loại)
 export const adminListBooksQuerySchema = listBooksQuerySchema.pick({
   q: true,

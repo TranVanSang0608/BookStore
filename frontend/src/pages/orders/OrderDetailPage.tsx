@@ -73,7 +73,7 @@ export default function OrderDetailPage() {
     <div className="max-w-4xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Đơn {order.order_code}</h1>
+          <h1 className="font-serif text-3xl font-semibold text-base-content">Đơn {order.order_code}</h1>
           <p className="text-sm text-base-content/60">Đặt lúc {formatDateTime(order.placed_at)}</p>
         </div>
         <span className={`badge ${meta.badge} badge-lg`}>{meta.label}</span>
@@ -101,9 +101,9 @@ export default function OrderDetailPage() {
 
       <div className="grid lg:grid-cols-2 gap-4 items-start">
         {/* Địa chỉ giao (snapshot lúc đặt) */}
-        <div className="card bg-base-100 shadow">
+        <div className="card bg-base-100 border border-base-300">
           <div className="card-body space-y-1">
-            <h2 className="card-title text-base">Giao tới</h2>
+            <h2 className="card-title font-serif text-base">Giao tới</h2>
             <p className="font-semibold">
               {order.shipping_recipient_name}{' '}
               <span className="font-normal text-base-content/60">| {order.shipping_phone}</span>
@@ -116,9 +116,9 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Thanh toán + tiền */}
-        <div className="card bg-base-100 shadow">
+        <div className="card bg-base-100 border border-base-300">
           <div className="card-body space-y-1">
-            <h2 className="card-title text-base">Thanh toán</h2>
+            <h2 className="card-title font-serif text-base">Thanh toán</h2>
             <p className="text-sm flex items-center gap-2 flex-wrap">
               <span>
                 Hình thức:{' '}

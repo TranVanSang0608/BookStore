@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
+import AuthLayout from '../../components/AuthLayout'
 import GoogleLoginButton from '../../components/GoogleLoginButton'
 import { useAuth } from '../../hooks/useAuth'
 import { registerFormSchema, zodErrorsToMap } from '../../lib/validation'
@@ -63,53 +64,47 @@ export default function RegisterPage() {
   ]
 
   return (
-    <div className="py-16 px-4">
-      <div className="card bg-base-100 shadow max-w-md mx-auto">
-        <div className="card-body">
-          <h1 className="card-title text-2xl">Đăng ký tài khoản</h1>
+    <AuthLayout title="Đăng ký tài khoản">
+      {mutation.isError && (
+        <div className="alert alert-error text-sm">{getApiErrorMessage(mutation.error)}</div>
+      )}
 
-          {mutation.isError && (
-            <div className="alert alert-error text-sm">{getApiErrorMessage(mutation.error)}</div>
-          )}
+      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+        {fields.map((f) => (
+          <div key={f.key}>
+            <label className="label" htmlFor={f.key}>
+              {f.label}
+            </label>
+            <input
+              id={f.key}
+              type={f.type}
+              className="input input-bordered w-full"
+              value={form[f.key]}
+              onChange={setField(f.key)}
+            />
+            {fieldErrors[f.key] ? (
+              <p className="text-error text-sm mt-1">{fieldErrors[f.key]}</p>
+            ) : (
+              f.hint && <p className="text-base-content/60 text-sm mt-1">{f.hint}</p>
+            )}
+          </div>
+        ))}
 
-          <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-            {fields.map((f) => (
-              <div key={f.key}>
-                <label className="label" htmlFor={f.key}>
-                  {f.label}
-                </label>
-                <input
-                  id={f.key}
-                  type={f.type}
-                  className="input input-bordered w-full"
-                  value={form[f.key]}
-                  onChange={setField(f.key)}
-                />
-                {fieldErrors[f.key] ? (
-                  <p className="text-error text-sm mt-1">{fieldErrors[f.key]}</p>
-                ) : (
-                  f.hint && <p className="text-base-content/60 text-sm mt-1">{f.hint}</p>
-                )}
-              </div>
-            ))}
+        <button type="submit" className="btn btn-primary w-full" disabled={mutation.isPending}>
+          {mutation.isPending && <span className="loading loading-spinner loading-sm" />}
+          Đăng ký
+        </button>
+      </form>
 
-            <button type="submit" className="btn btn-primary w-full" disabled={mutation.isPending}>
-              {mutation.isPending && <span className="loading loading-spinner loading-sm" />}
-              Đăng ký
-            </button>
-          </form>
+      <div className="divider text-sm">hoặc</div>
+      <GoogleLoginButton from="/" />
 
-          <div className="divider text-sm">hoặc</div>
-          <GoogleLoginButton from="/" />
-
-          <p className="text-sm text-center mt-2">
-            Đã có tài khoản?{' '}
-            <Link to="/login" className="link link-primary">
-              Đăng nhập
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+      <p className="text-sm text-center mt-2">
+        Đã có tài khoản?{' '}
+        <Link to="/login" className="link link-primary">
+          Đăng nhập
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

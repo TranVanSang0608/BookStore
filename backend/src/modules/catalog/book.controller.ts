@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { parseId } from '../../lib/parse-id';
-import { adminListBooksQuerySchema, listBooksQuerySchema } from './book.schemas';
+import { adminListBooksQuerySchema, bestsellersQuerySchema, listBooksQuerySchema } from './book.schemas';
 import * as bookService from './book.service';
 
 export async function list(req: Request, res: Response) {
@@ -19,6 +19,13 @@ export async function detail(req: Request, res: Response) {
 // Sách liên quan (Phase 8) — public, hiện dưới trang chi tiết
 export async function related(req: Request, res: Response) {
   const books = await bookService.getRelatedBooks(String(req.params.slug));
+  res.json({ success: true, data: books });
+}
+
+// Sách bán chạy — public, khối "Bán chạy" trang chủ
+export async function bestsellers(req: Request, res: Response) {
+  const { limit } = bestsellersQuerySchema.parse(req.query);
+  const books = await bookService.getBestsellers(limit);
   res.json({ success: true, data: books });
 }
 

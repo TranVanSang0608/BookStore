@@ -2,6 +2,7 @@
 import { prisma } from '../lib/prisma';
 import {
   createBook,
+  getBestsellers,
   getBookBySlug,
   getRelatedBooks,
   listBooks,
@@ -29,6 +30,9 @@ jest.mock('../lib/prisma', () => ({
       createMany: jest.fn(),
       deleteMany: jest.fn(),
     },
+    orderItem: {
+      groupBy: jest.fn(),
+    },
     // $transaction giả: dạng callback thì gọi callback với chính prisma mock (đóng vai tx)
     $transaction: jest.fn(async (arg: unknown) =>
       typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(prisma) : Promise.all(arg as Promise<unknown>[]),
@@ -46,6 +50,7 @@ const mockAuthorFindUnique = prisma.author.findUnique as jest.Mock;
 const mockCategoryCount = prisma.category.count as jest.Mock;
 const mockJunctionCreateMany = prisma.bookCategory.createMany as jest.Mock;
 const mockJunctionDeleteMany = prisma.bookCategory.deleteMany as jest.Mock;
+const mockOrderItemGroupBy = prisma.orderItem.groupBy as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -228,5 +233,52 @@ describe('getRelatedBooks (Phase 8)', () => {
     await getRelatedBooks('khong-the-loai');
     const arg = (prisma.book.findMany as jest.Mock).mock.calls[0][0];
     expect(arg.where.OR[1].categories.some.category_id.in).toEqual([]);
+  });
+});
+
+describe('getBestsellers (B-Sale)', () => {
+  it('group OrderItem theo book_id, chỉ đơn Delivered + book_id khác null, xếp số bán giảm dần, take limit', async () => {
+    mockOrderItemGroupBy.mockResolvedValue([]);
+
+    await getBestsellers(5);
+
+    const arg = mockOrderItemGroupBy.mock.calls[0][0];
+    expect(arg.by).toEqual(['book_id']);
+    expect(arg.where).toEqual({ order: { status: 'Delivered' }, book_id: { not: null } });
+    expect(arg._sum).toEqual({ quantity: true });
+    expect(arg.orderBy).toEqual({ _sum: { quantity: 'desc' } });
+    expect(arg.take).toBe(5);
+  });
+
+  it('chưa bán được cuốn nào → trả [] và KHÔNG query Book', async () => {
+    mockOrderItemGroupBy.mockResolvedValue([]);
+
+    const res = await getBestsellers(10);
+
+    expect(res).toEqual([]);
+    expect(mockBookFindMany).not.toHaveBeenCalled();
+  });
+
+  it('giữ ĐÚNG thứ hạng bán chạy & loại sách đã ẩn (vắng trong findMany)', async () => {
+    // book 7 bán nhiều nhất, rồi 3, rồi 9; nhưng book 9 đã bị ẩn → findMany không trả về
+    mockOrderItemGroupBy.mockResolvedValue([
+      { book_id: 7, _sum: { quantity: 30 } },
+      { book_id: 3, _sum: { quantity: 20 } },
+      { book_id: 9, _sum: { quantity: 10 } },
+    ]);
+    // findMany trả KHÔNG theo thứ tự ids và THIẾU id 9 (is_active=false)
+    mockBookFindMany.mockResolvedValue([
+      { id: 3, title: 'B' },
+      { id: 7, title: 'A' },
+    ]);
+
+    const res = await getBestsellers(10);
+
+    expect(mockBookFindMany.mock.calls[0][0].where).toEqual({ id: { in: [7, 3, 9] }, is_active: true });
+    // đúng thứ hạng 7 → 3; id 9 bị loại vì đã ẩn
+    expect(res).toEqual([
+      { id: 7, title: 'A' },
+      { id: 3, title: 'B' },
+    ]);
   });
 });

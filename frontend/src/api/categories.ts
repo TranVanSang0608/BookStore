@@ -5,6 +5,7 @@ export interface Category {
   name: string
   slug: string
   description: string | null
+  book_count?: number // số sách đang bán trong thể loại (chỉ có ở GET /categories)
 }
 
 interface ApiResponse<T> {

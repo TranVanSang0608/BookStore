@@ -181,9 +181,9 @@ function BookForm({ editId, initial }: { editId: number | null; initial: FormSta
   }
 
   return (
-    <div className="card bg-base-100 shadow">
+    <div className="card bg-base-100 border border-base-300">
       <div className="card-body">
-        <h1 className="card-title">{editId === null ? 'Thêm sách mới' : 'Sửa sách'}</h1>
+        <h1 className="card-title font-serif">{editId === null ? 'Thêm sách mới' : 'Sửa sách'}</h1>
 
         {error && <div className="alert alert-error text-sm">{error}</div>}
 

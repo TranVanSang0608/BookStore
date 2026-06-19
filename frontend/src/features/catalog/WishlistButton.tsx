@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Heart } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { fetchWishlistIds, toggleWishlistApi } from '../../api/wishlist'
 import { useAuth } from '../../hooks/useAuth'
 
 // Nút tim tự chứa: tự biết trạng thái (từ query ['wishlist-ids']) + tự toggle.
-// Dùng được trên thẻ sách (trong <Link>) lẫn trang chi tiết.
+// Dùng được trên thẻ sách (cạnh <Link>) lẫn trang chi tiết.
 export default function WishlistButton({ bookId, className = '' }: { bookId: number; className?: string }) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
@@ -27,7 +28,7 @@ export default function WishlistButton({ bookId, className = '' }: { bookId: num
   })
 
   function handleClick(e: React.MouseEvent) {
-    // Thẻ sách bọc trong <Link> — chặn điều hướng + nổi bọt khi bấm tim
+    // Thẻ sách có <Link> bên cạnh — chặn điều hướng + nổi bọt khi bấm tim
     e.preventDefault()
     e.stopPropagation()
     if (!isLoggedIn) {
@@ -42,13 +43,15 @@ export default function WishlistButton({ bookId, className = '' }: { bookId: num
       type="button"
       onClick={handleClick}
       disabled={mutation.isPending}
-      className={`btn btn-circle btn-sm bg-base-100/80 hover:bg-base-100 border-none text-lg ${className}`}
+      className={`btn btn-circle btn-sm bg-base-100/85 hover:bg-base-100 border-none ${className}`}
       aria-label={wishlisted ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
       title={wishlisted ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
     >
-      <span className={wishlisted ? 'text-error' : 'text-base-content/40'}>
-        {wishlisted ? '♥' : '♡'}
-      </span>
+      <Heart
+        size={16}
+        fill={wishlisted ? 'currentColor' : 'none'}
+        className={wishlisted ? 'text-secondary' : 'text-base-content/50'}
+      />
     </button>
   )
 }

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { ShoppingCart } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchBookBySlug } from '../../api/books'
@@ -40,7 +41,7 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
   if (stock === 0) {
     return (
       <button className="btn btn-primary w-fit" disabled>
-        Thêm vào giỏ
+        Hết hàng
       </button>
     )
   }
@@ -60,9 +61,9 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
             setQty(Number.isInteger(value) ? Math.min(Math.max(value, 1), maxQty) : 1)
           }}
         />
-        <button className="btn btn-primary" onClick={handleAdd} disabled={adding}>
-          {adding && <span className="loading loading-spinner loading-sm" />}
-          🛒 Thêm vào giỏ
+        <button className="btn btn-primary gap-2" onClick={handleAdd} disabled={adding}>
+          {adding ? <span className="loading loading-spinner loading-sm" /> : <ShoppingCart size={18} />}
+          Thêm vào giỏ
         </button>
       </div>
       {message && <p className="text-success text-sm">{message}</p>}
@@ -73,6 +74,7 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
 
 export default function BookDetailPage() {
   const { slug } = useParams()
+  const [tab, setTab] = useState<'desc' | 'info' | 'reviews'>('desc')
 
   const { data: book, isPending, isError } = useQuery({
     queryKey: ['book', slug],
@@ -108,75 +110,132 @@ export default function BookDetailPage() {
     { label: 'ISBN', value: book.isbn },
   ].filter((row) => row.value != null)
 
+  const tabs = [
+    { key: 'desc', label: 'Mô tả' },
+    { key: 'info', label: 'Thông tin' },
+    { key: 'reviews', label: `Đánh giá (${book.review_count})` },
+  ] as const
+
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <div className="card lg:card-side bg-base-100 shadow">
-        <figure className="lg:w-80 shrink-0 p-6 relative">
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* Breadcrumb */}
+      <nav aria-label="Breadcrumb" className="text-sm text-base-content/50 mb-4 flex gap-2 items-center flex-wrap">
+        <Link to="/" className="hover:text-primary">
+          Trang chủ
+        </Link>
+        <span>›</span>
+        <Link to="/books" className="hover:text-primary">
+          Tất cả sách
+        </Link>
+        <span>›</span>
+        <span className="text-base-content/70 line-clamp-1">{book.title}</span>
+      </nav>
+
+      {/* ===== HERO ===== */}
+      <div className="grid md:grid-cols-[300px_1fr] gap-8 items-start bg-base-100 border border-base-300 rounded-box p-6">
+        <figure className="relative">
           <CoverImage
             url={book.cover_image_url}
             title={book.title}
-            className="w-full aspect-[2/3] rounded-box"
+            className="w-full aspect-[2/3] rounded-lg shadow-sm ring-1 ring-black/5"
           />
-          <WishlistButton bookId={book.id} className="absolute top-8 right-8" />
+          <WishlistButton bookId={book.id} className="absolute top-3 right-3" />
         </figure>
 
-        <div className="card-body space-y-2">
-          <h1 className="card-title text-2xl">{book.title}</h1>
-
-          <Stars value={book.avg_rating} count={book.review_count} />
-
-          <p>
-            Tác giả:{' '}
-            <Link to={`/author/${book.author.id}`} className="link link-primary">
-              {book.author.name}
-            </Link>
-          </p>
-
-          <div className="flex gap-2 flex-wrap">
-            {book.categories.map((c) => (
-              <Link key={c.id} to={`/books?category=${c.slug}`} className="badge badge-outline">
-                {c.name}
+        <div className="space-y-4">
+          <div>
+            <h1 className="font-serif text-3xl font-semibold text-base-content leading-tight">
+              {book.title}
+            </h1>
+            <p className="text-base-content/60 mt-1">
+              Tác giả:{' '}
+              <Link to={`/author/${book.author.id}`} className="text-primary hover:underline">
+                {book.author.name}
               </Link>
-            ))}
+            </p>
           </div>
 
-          <p className="text-3xl font-bold text-primary">{formatPrice(book.price)}</p>
+          {book.review_count > 0 && <Stars value={book.avg_rating} count={book.review_count} />}
 
-          {book.stock_quantity > 0 ? (
-            <span className="badge badge-success">Còn hàng ({book.stock_quantity})</span>
-          ) : (
-            <span className="badge badge-error">Hết hàng</span>
-          )}
-
-          <AddToCart bookId={book.id} stock={book.stock_quantity} />
-
-          {book.description && (
-            <div>
-              <h2 className="font-semibold mt-2">Mô tả</h2>
-              {/* whitespace-pre-line: giữ các đoạn xuống dòng trong mô tả */}
-              <p className="text-base-content/80 whitespace-pre-line">{book.description}</p>
+          {book.categories.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {book.categories.map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/books?category=${c.slug}`}
+                  className="badge badge-outline border-base-300 hover:border-primary hover:text-primary"
+                >
+                  {c.name}
+                </Link>
+              ))}
             </div>
           )}
 
-          {thongTinXuatBan.length > 0 && (
-            <div>
-              <h2 className="font-semibold mt-2">Thông tin xuất bản</h2>
+          <p className="font-serif text-4xl font-bold text-primary">{formatPrice(book.price)}</p>
+
+          {book.stock_quantity > 0 ? (
+            <span className="badge badge-success badge-outline">
+              Còn hàng ({book.stock_quantity})
+            </span>
+          ) : (
+            <span className="badge badge-error badge-outline">Hết hàng</span>
+          )}
+
+          <AddToCart bookId={book.id} stock={book.stock_quantity} />
+        </div>
+      </div>
+
+      {/* ===== TABS ===== */}
+      <div className="mt-8 bg-base-100 border border-base-300 rounded-box p-6">
+        <div role="tablist" className="flex gap-1 border-b border-base-300">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={tab === t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === t.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-base-content/60 hover:text-base-content'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="pt-6">
+          {tab === 'desc' &&
+            (book.description ? (
+              // whitespace-pre-line: giữ các đoạn xuống dòng trong mô tả
+              <p className="text-base-content/80 whitespace-pre-line leading-relaxed">
+                {book.description}
+              </p>
+            ) : (
+              <p className="text-base-content/50">Chưa có mô tả cho sách này.</p>
+            ))}
+
+          {tab === 'info' &&
+            (thongTinXuatBan.length > 0 ? (
               <table className="table table-sm max-w-md">
                 <tbody>
                   {thongTinXuatBan.map((row) => (
                     <tr key={row.label}>
-                      <td className="text-base-content/60">{row.label}</td>
+                      <td className="text-base-content/60 w-40">{row.label}</td>
                       <td>{row.value}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
+            ) : (
+              <p className="text-base-content/50">Chưa cập nhật thông tin xuất bản.</p>
+            ))}
+
+          {tab === 'reviews' && <ReviewsSection bookId={book.id} />}
         </div>
       </div>
 
-      <ReviewsSection bookId={book.id} />
       <RelatedBooks slug={book.slug} />
     </div>
   )

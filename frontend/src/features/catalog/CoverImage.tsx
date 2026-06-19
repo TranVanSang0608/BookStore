@@ -1,19 +1,24 @@
+import { BookOpen } from 'lucide-react'
+
 interface Props {
   url: string | null
   title: string
   className?: string
 }
 
-// Ảnh bìa sách với fallback: sách chưa có ảnh hiện ô xám cùng kích thước
-// (mọi sách đều có thể thiếu bìa — cover_image_url cho phép null trong DB)
+// Ảnh bìa sách với fallback đẹp: sách chưa có ảnh hiện ô màu giấy + icon sách + tên sách.
+// Icon co theo bề rộng ô (w-1/4, chặn 16–40px) nên gọn cả ở thumbnail nhỏ lẫn thẻ to.
 export default function CoverImage({ url, title, className = '' }: Props) {
   if (!url) {
     return (
       <div
-        className={`bg-base-200 flex items-center justify-center text-base-content/30 ${className}`}
+        className={`flex flex-col items-center justify-center gap-1.5 bg-base-300 p-2 text-center ${className}`}
         aria-label={`Chưa có ảnh bìa: ${title}`}
       >
-        <span className="text-4xl">📖</span>
+        <BookOpen className="w-1/4 h-auto min-w-4 max-w-10 text-base-content/35" aria-hidden="true" />
+        <span className="font-serif text-sm leading-tight line-clamp-3 text-base-content/55">
+          {title}
+        </span>
       </div>
     )
   }

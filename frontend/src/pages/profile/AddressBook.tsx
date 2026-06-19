@@ -24,10 +24,10 @@ export default function AddressBook() {
   const defaultMutation = useMutation({ mutationFn: setDefaultAddressApi, onSuccess: invalidate })
 
   return (
-    <div className="card bg-base-100 shadow">
+    <div className="card bg-base-100 border border-base-300">
       <div className="card-body">
         <div className="flex items-center justify-between">
-          <h2 className="card-title">Sổ địa chỉ</h2>
+          <h2 className="card-title font-serif">Sổ địa chỉ</h2>
           {showForm === null && (
             <button className="btn btn-primary btn-sm" onClick={() => setShowForm('new')}>
               + Thêm địa chỉ

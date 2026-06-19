@@ -110,9 +110,9 @@ export default function AdminVouchersPage() {
   }
 
   return (
-    <div className="card bg-base-100 shadow">
+    <div className="card bg-base-100 border border-base-300">
       <div className="card-body space-y-4">
-        <h1 className="card-title">Quản lý mã giảm giá</h1>
+        <h1 className="card-title font-serif">Quản lý mã giảm giá</h1>
 
         {error && <div className="alert alert-error text-sm">{error}</div>}
 

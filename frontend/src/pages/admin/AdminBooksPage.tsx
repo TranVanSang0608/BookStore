@@ -35,10 +35,10 @@ export default function AdminBooksPage() {
   }
 
   return (
-    <div className="card bg-base-100 shadow">
+    <div className="card bg-base-100 border border-base-300">
       <div className="card-body space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h1 className="card-title">Quản lý sách {data && `(${data.total})`}</h1>
+          <h1 className="card-title font-serif">Quản lý sách {data && `(${data.total})`}</h1>
           <Link to="/admin/books/new" className="btn btn-primary btn-sm">
             + Thêm sách
           </Link>

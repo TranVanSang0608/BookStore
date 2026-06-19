@@ -90,35 +90,36 @@ export default function AppRoutes() {
             </RequireAuth>
           }
         />
+      </Route>
 
-        {/* Khu quản trị: route lồng nhau — AdminLayout render sidebar,
-            trang con hiện vào <Outlet/>. RequireAdmin chặn user thường. */}
+      {/* Khu quản trị: ĐỨNG RIÊNG ngoài <Layout> marketing — AdminLayout tự có
+          thanh top + sidebar riêng, KHÔNG hiện navbar/footer của cửa hàng.
+          RequireAdmin chặn user thường. */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAdmin>
+            <AdminLayout />
+          </RequireAdmin>
+        }
+      >
+        {/* Trang chủ khu admin là dashboard tổng quan (Phase 9) — lazy nên bọc Suspense */}
         <Route
-          path="/admin"
+          index
           element={
-            <RequireAdmin>
-              <AdminLayout />
-            </RequireAdmin>
+            <Suspense fallback={<span className="loading loading-spinner" />}>
+              <AdminDashboardPage />
+            </Suspense>
           }
-        >
-          {/* Trang chủ khu admin là dashboard tổng quan (Phase 9) — lazy nên bọc Suspense */}
-          <Route
-            index
-            element={
-              <Suspense fallback={<span className="loading loading-spinner" />}>
-                <AdminDashboardPage />
-              </Suspense>
-            }
-          />
-          <Route path="orders" element={<AdminOrdersPage />} />
-          <Route path="orders/:id" element={<AdminOrderDetailPage />} />
-          <Route path="books" element={<AdminBooksPage />} />
-          <Route path="books/new" element={<AdminBookFormPage />} />
-          <Route path="books/:id/edit" element={<AdminBookFormPage />} />
-          <Route path="categories" element={<AdminCategoriesPage />} />
-          <Route path="authors" element={<AdminAuthorsPage />} />
-          <Route path="vouchers" element={<AdminVouchersPage />} />
-        </Route>
+        />
+        <Route path="orders" element={<AdminOrdersPage />} />
+        <Route path="orders/:id" element={<AdminOrderDetailPage />} />
+        <Route path="books" element={<AdminBooksPage />} />
+        <Route path="books/new" element={<AdminBookFormPage />} />
+        <Route path="books/:id/edit" element={<AdminBookFormPage />} />
+        <Route path="categories" element={<AdminCategoriesPage />} />
+        <Route path="authors" element={<AdminAuthorsPage />} />
+        <Route path="vouchers" element={<AdminVouchersPage />} />
       </Route>
     </Routes>
   )

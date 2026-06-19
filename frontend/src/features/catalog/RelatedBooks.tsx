@@ -12,9 +12,9 @@ export default function RelatedBooks({ slug }: { slug: string }) {
   if (!books || books.length === 0) return null
 
   return (
-    <div className="mt-8">
-      <h2 className="text-xl font-bold mb-3">Sách liên quan</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="mt-10">
+      <h2 className="font-serif text-2xl font-semibold text-base-content mb-5">Sách liên quan</h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {books.map((book) => (
           <BookCard key={book.id} book={book} />
         ))}

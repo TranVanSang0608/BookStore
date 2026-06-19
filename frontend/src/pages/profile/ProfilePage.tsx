@@ -6,7 +6,7 @@ import ProfileInfoForm from './ProfileInfoForm'
 export default function ProfilePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
-      <h1 className="text-2xl font-bold">Tài khoản của tôi</h1>
+      <h1 className="font-serif text-3xl font-semibold text-base-content">Tài khoản của tôi</h1>
       <ProfileInfoForm />
       <ChangePasswordForm />
       <AddressBook />

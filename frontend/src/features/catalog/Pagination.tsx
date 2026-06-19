@@ -10,20 +10,20 @@ export default function Pagination({ page, totalPages, onChange }: Props) {
 
   return (
     <div className="join justify-center w-full">
-      <button className="join-item btn" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+      <button className="join-item btn btn-sm" disabled={page <= 1} onClick={() => onChange(page - 1)}>
         «
       </button>
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
         <button
           key={p}
-          className={`join-item btn ${p === page ? 'btn-active' : ''}`}
+          className={`join-item btn btn-sm ${p === page ? 'btn-primary' : ''}`}
           onClick={() => onChange(p)}
         >
           {p}
         </button>
       ))}
       <button
-        className="join-item btn"
+        className="join-item btn btn-sm"
         disabled={page >= totalPages}
         onClick={() => onChange(page + 1)}
       >

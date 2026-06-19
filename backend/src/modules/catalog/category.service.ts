@@ -3,8 +3,15 @@ import { toSlug } from '../../lib/slug';
 import { AppError } from '../../middleware/error';
 import type { CategoryInput } from './category.schemas';
 
-export function listCategories() {
-  return prisma.category.findMany({ orderBy: { name: 'asc' } });
+export async function listCategories() {
+  const categories = await prisma.category.findMany({
+    orderBy: { name: 'asc' },
+    // Đếm số sách ĐANG BÁN (is_active=true) trong mỗi thể loại — qua bảng junction books.
+    // _count có filter where (Prisma filteredRelationCount) nên không cần query đếm riêng từng thể loại.
+    include: { _count: { select: { books: { where: { book: { is_active: true } } } } } },
+  });
+  // Làm phẳng _count.books → book_count cho FE dễ đọc (ẩn cấu trúc _count của Prisma)
+  return categories.map(({ _count, ...c }) => ({ ...c, book_count: _count.books }));
 }
 
 // ---------- Phần admin ----------

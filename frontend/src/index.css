@@ -1,7 +1,92 @@
 /* Tailwind 4: cấu hình bằng CSS thay vì tailwind.config.js */
 @import 'tailwindcss';
 
-/* DaisyUI 5: nạp dưới dạng CSS plugin, dùng 2 theme sáng/tối có sẵn */
-@plugin "daisyui" {
-  themes: light --default, dark --prefersdark;
+/* Font thương hiệu — đăng ký token để dùng qua tiện ích font-sans / font-serif */
+@theme {
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', ui-serif, Georgia, serif;
+}
+
+/* DaisyUI 5: nạp plugin rồi khai báo 2 theme thương hiệu "Ánh Sách" (sáng + tối) */
+@plugin "daisyui";
+
+/* Theme SÁNG — bookworm (mặc định). Màu lấy từ mockup The Bookworm / Ánh Sách. */
+@plugin "daisyui/theme" {
+  name: 'bookworm';
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #fbf7ef; /* bề mặt thẻ / navbar (kem nhạt) */
+  --color-base-200: #f4eee2; /* nền trang (kem giấy) */
+  --color-base-300: #e0d6c3; /* đường kẻ / viền */
+  --color-base-content: #2e2620; /* chữ chính (mực) */
+
+  --color-primary: #3e5a39; /* xanh rêu — màu chính */
+  --color-primary-content: #f4eee2;
+  --color-secondary: #7c3242; /* mận — màu phụ / giá KM */
+  --color-secondary-content: #f8e9e9;
+  --color-accent: #b28b4c; /* vàng đồng — điểm nhấn "ánh sáng" */
+  --color-accent-content: #2e2316;
+  --color-neutral: #2c3f28; /* xanh đậm — footer / nền tối */
+  --color-neutral-content: #e7e0cf;
+
+  --color-info: #4a6e9e;
+  --color-info-content: #f4eee2;
+  --color-success: #3e7a4e;
+  --color-success-content: #f4eee2;
+  --color-warning: #b28b4c;
+  --color-warning-content: #2e2316;
+  --color-error: #9e2b3b;
+  --color-error-content: #f8e9e9;
+
+  --radius-selector: 0.75rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Theme TỐI — bookwormdark (tự bật khi máy để dark; sau này thêm nút chuyển tay ở Giai đoạn B). */
+@plugin "daisyui/theme" {
+  name: 'bookwormdark';
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #221d18;
+  --color-base-200: #191512;
+  --color-base-300: #3a3128;
+  --color-base-content: #e9dfcb;
+
+  --color-primary: #6e9460; /* xanh rêu sáng hơn cho nền tối */
+  --color-primary-content: #0e160b;
+  --color-secondary: #b9536a;
+  --color-secondary-content: #1c0c11;
+  --color-accent: #c6a05e;
+  --color-accent-content: #241b0c;
+  --color-neutral: #120e0b;
+  --color-neutral-content: #c8bfa8;
+
+  --color-info: #7aa0c8;
+  --color-info-content: #0c1420;
+  --color-success: #74a37f;
+  --color-success-content: #0c1810;
+  --color-warning: #c6a05e;
+  --color-warning-content: #241b0c;
+  --color-error: #d98a98;
+  --color-error-content: #2a0c12;
+
+  --radius-selector: 0.75rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Font thân mặc định cho toàn trang (tiêu đề dùng tiện ích font-serif khi cần) */
+body {
+  font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
 }

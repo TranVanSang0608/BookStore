@@ -122,6 +122,33 @@ export async function getRelatedBooks(slug: string) {
   });
 }
 
+// Sách BÁN CHẠY (public — khối trang chủ). Xếp theo TỔNG số cuốn đã bán trong các đơn
+// ĐÃ GIAO (Delivered) — nhất quán với KPI doanh thu dashboard ("đã bán thật" mới tính).
+// Group theo book_id (KHÁC dashboard group theo book_title snapshot) để trả card sách THẬT
+// (id/slug/giá/bìa) cho FE link + thêm giỏ. Sách đã ẩn (is_active=false) bị loại khỏi kết quả.
+export async function getBestsellers(limit: number) {
+  const grouped = await prisma.orderItem.groupBy({
+    by: ['book_id'],
+    where: { order: { status: 'Delivered' }, book_id: { not: null } },
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: 'desc' } },
+    take: limit,
+  });
+
+  const ids = grouped.map((g) => g.book_id).filter((id): id is number => id !== null);
+  if (ids.length === 0) return [];
+
+  const books = await prisma.book.findMany({
+    where: { id: { in: ids }, is_active: true },
+    select: bookCardSelect,
+  });
+
+  // findMany KHÔNG đảm bảo thứ tự theo `ids` → sắp lại đúng thứ hạng bán chạy,
+  // đồng thời loại sách đã bị ẩn (id có trong ranking nhưng vắng trong `books`)
+  const byId = new Map(books.map((b) => [b.id, b]));
+  return ids.map((id) => byId.get(id)).filter((b): b is (typeof books)[number] => b !== undefined);
+}
+
 // ---------- Phần admin (các hàm dưới đây chỉ được gọi sau auth + adminOnly) ----------
 
 // Sinh slug duy nhất từ title: thử "dac-nhan-tam", nếu DB đã có thì "dac-nhan-tam-2", "-3"...

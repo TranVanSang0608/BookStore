@@ -42,9 +42,9 @@ export default function ChangePasswordForm() {
   ]
 
   return (
-    <div className="card bg-base-100 shadow">
+    <div className="card bg-base-100 border border-base-300">
       <div className="card-body">
-        <h2 className="card-title">Đổi mật khẩu</h2>
+        <h2 className="card-title font-serif">Đổi mật khẩu</h2>
 
         {mutation.isSuccess && (
           <div className="alert alert-success text-sm">Đổi mật khẩu thành công</div>

@@ -55,7 +55,7 @@ export default function AdminOrderDetailPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Đơn {order.order_code}</h1>
+          <h1 className="font-serif text-2xl font-semibold text-base-content">Đơn {order.order_code}</h1>
           <p className="text-sm text-base-content/60">Đặt lúc {formatDateTime(order.placed_at)}</p>
         </div>
         <span className={`badge ${meta.badge} badge-lg`}>{meta.label}</span>
@@ -66,7 +66,7 @@ export default function AdminOrderDetailPage() {
       )}
 
       {/* Khu thao tác trạng thái */}
-      <div className="card bg-base-100 shadow">
+      <div className="card bg-base-100 border border-base-300">
         <div className="card-body flex-row flex-wrap gap-2 items-center">
           {nextStatus && (
             <button
@@ -96,16 +96,16 @@ export default function AdminOrderDetailPage() {
 
       <div className="grid lg:grid-cols-2 gap-4 items-start">
         {/* Khách + địa chỉ giao (snapshot) */}
-        <div className="card bg-base-100 shadow">
+        <div className="card bg-base-100 border border-base-300">
           <div className="card-body space-y-1">
-            <h2 className="card-title text-base">Khách hàng</h2>
+            <h2 className="card-title font-serif text-base">Khách hàng</h2>
             {order.user && (
               <p className="text-sm">
                 {order.user.name} <span className="text-base-content/50">({order.user.email})</span>
               </p>
             )}
             <div className="divider my-1" />
-            <h2 className="card-title text-base">Giao tới</h2>
+            <h2 className="card-title font-serif text-base">Giao tới</h2>
             <p className="font-semibold">
               {order.shipping_recipient_name}{' '}
               <span className="font-normal text-base-content/60">| {order.shipping_phone}</span>
@@ -118,9 +118,9 @@ export default function AdminOrderDetailPage() {
         </div>
 
         {/* Tiền */}
-        <div className="card bg-base-100 shadow">
+        <div className="card bg-base-100 border border-base-300">
           <div className="card-body space-y-1">
-            <h2 className="card-title text-base">Thanh toán</h2>
+            <h2 className="card-title font-serif text-base">Thanh toán</h2>
             {(() => {
               // Lần thử mới nhất (payments xếp id tăng dần) — VNPay retry tạo nhiều row
               const payment = order.payments[order.payments.length - 1]
@@ -152,7 +152,7 @@ export default function AdminOrderDetailPage() {
       </div>
 
       {/* Dòng hàng */}
-      <div className="card bg-base-100 shadow">
+      <div className="card bg-base-100 border border-base-300">
         <div className="card-body p-4 overflow-x-auto">
           <table className="table table-sm">
             <thead>

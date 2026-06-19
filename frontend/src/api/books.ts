@@ -56,6 +56,14 @@ export async function fetchRelatedBooks(slug: string): Promise<BookCardData[]> {
   return data.data
 }
 
+// Sách bán chạy (khối trang chủ) — top theo lượng đã bán trong đơn Delivered
+export async function fetchBestsellers(limit = 5): Promise<BookCardData[]> {
+  const { data } = await apiClient.get<ApiResponse<BookCardData[]>>('/books/bestsellers', {
+    params: { limit: String(limit) },
+  })
+  return data.data
+}
+
 // Lấy nhiều sách theo id — trang giỏ của GUEST dùng để enrich localStorage
 // (chỉ có book_id + qty) thành dòng giỏ đầy đủ với giá/tên/bìa HIỆN TẠI.
 // Sách bị ẩn/xóa sẽ vắng mặt trong kết quả → trang giỏ hiện cảnh báo.

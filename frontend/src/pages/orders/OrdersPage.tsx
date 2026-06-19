@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { Package } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchMyOrders } from '../../api/orders'
+import EmptyState from '../../components/EmptyState'
 import Pagination from '../../features/catalog/Pagination'
 import { formatDateTime, formatPrice } from '../../lib/format'
 import { ORDER_STATUS_META } from '../../lib/order-status'
@@ -16,7 +18,7 @@ export default function OrdersPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Đơn hàng của tôi</h1>
+      <h1 className="font-serif text-3xl font-semibold text-base-content">Đơn hàng của tôi</h1>
 
       {isPending && (
         <div className="flex justify-center py-20">
@@ -25,14 +27,16 @@ export default function OrdersPage() {
       )}
 
       {data && data.items.length === 0 && (
-        <div className="card bg-base-100 shadow">
-          <div className="card-body items-center py-16 space-y-2">
-            <p className="text-base-content/60">Bạn chưa có đơn hàng nào</p>
+        <EmptyState
+          icon={<Package size={44} />}
+          title="Bạn chưa có đơn hàng nào"
+          description="Khám phá sách và đặt đơn đầu tiên nhé."
+          action={
             <Link to="/books" className="btn btn-primary">
               Mua sắm ngay
             </Link>
-          </div>
-        </div>
+          }
+        />
       )}
 
       {data && data.items.length > 0 && (
@@ -47,11 +51,11 @@ export default function OrdersPage() {
                 <Link
                   key={order.order_code}
                   to={`/orders/${order.order_code}`}
-                  className="card bg-base-100 shadow hover:shadow-md transition-shadow"
+                  className="card bg-base-100 border border-base-300 hover:border-primary/40 transition-colors"
                 >
                   <div className="card-body p-4 flex-row items-center justify-between gap-3 flex-wrap">
                     <div className="space-y-0.5">
-                      <p className="font-semibold">{order.order_code}</p>
+                      <p className="font-serif font-semibold text-lg">{order.order_code}</p>
                       <p className="text-sm text-base-content/70">
                         {firstTitle}
                         {more > 0 && ` và ${more} sản phẩm khác`}
