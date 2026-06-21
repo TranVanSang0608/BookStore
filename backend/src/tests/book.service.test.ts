@@ -33,6 +33,7 @@ jest.mock('../lib/prisma', () => ({
     orderItem: {
       groupBy: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     // $transaction giả: dạng callback thì gọi callback với chính prisma mock (đóng vai tx)
     $transaction: jest.fn(async (arg: unknown) =>
       typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(prisma) : Promise.all(arg as Promise<unknown>[]),
@@ -51,6 +52,7 @@ const mockCategoryCount = prisma.category.count as jest.Mock;
 const mockJunctionCreateMany = prisma.bookCategory.createMany as jest.Mock;
 const mockJunctionDeleteMany = prisma.bookCategory.deleteMany as jest.Mock;
 const mockOrderItemGroupBy = prisma.orderItem.groupBy as jest.Mock;
+const mockQueryRaw = prisma.$queryRaw as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -78,17 +80,17 @@ describe('listBooks', () => {
     expect(where.is_active).toBe(true);
   });
 
-  it('q → tìm ILIKE trên cả title lẫn tên tác giả; category → lọc qua junction', async () => {
+  it('q → tìm KHÔNG DẤU qua $queryRaw (unaccent) rồi lọc theo id khớp; category/giá vẫn qua Prisma', async () => {
+    mockQueryRaw.mockResolvedValue([{ id: 3 }, { id: 7 }]); // id sách khớp từ truy vấn unaccent
     mockBookFindMany.mockResolvedValue([]);
     mockBookCount.mockResolvedValue(0);
 
-    await listBooks({ ...queryMacDinh, q: 'ánh', category: 'van-hoc', price_min: 50000, price_max: 200000 });
+    await listBooks({ ...queryMacDinh, q: 'dac nhan', category: 'van-hoc', price_min: 50000, price_max: 200000 });
 
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1); // có q → chạy truy vấn unaccent
     const where = mockBookFindMany.mock.calls[0][0].where;
-    expect(where.OR).toEqual([
-      { title: { contains: 'ánh', mode: 'insensitive' } },
-      { author: { name: { contains: 'ánh', mode: 'insensitive' } } },
-    ]);
+    expect(where.id).toEqual({ in: [3, 7] }); // lọc theo id khớp, thay where.OR cũ
+    expect(where.OR).toBeUndefined();
     expect(where.categories).toEqual({ some: { category: { slug: 'van-hoc' } } });
     expect(where.price).toEqual({ gte: 50000, lte: 200000 });
   });

@@ -8,6 +8,7 @@ import BookCard from '../../features/catalog/BookCard'
 import BookCardSkeleton from '../../features/catalog/BookCardSkeleton'
 import BookFilters from '../../features/catalog/BookFilters'
 import Pagination from '../../features/catalog/Pagination'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatPrice } from '../../lib/format'
 
 // Chip lọc đang áp dụng — bấm × để gỡ
@@ -28,6 +29,7 @@ export default function BookListPage() {
   // copy link gửi người khác ra đúng kết quả, nút Back của trình duyệt hoạt động đúng
   const [searchParams, setSearchParams] = useSearchParams()
   const params = Object.fromEntries(searchParams.entries())
+  useDocumentTitle('Kho sách')
 
   // queryKey chứa params → đổi filter là key đổi → React Query tự fetch lại
   const { data, isPending, isError } = useQuery({

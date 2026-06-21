@@ -24,11 +24,19 @@ export async function listBooks(query: ListBooksQuery) {
   const where: Prisma.BookWhereInput = { is_active: true };
 
   if (query.q) {
-    // ILIKE trên title HOẶC tên tác giả (mode 'insensitive' = không phân biệt hoa thường)
-    where.OR = [
-      { title: { contains: query.q, mode: 'insensitive' } },
-      { author: { name: { contains: query.q, mode: 'insensitive' } } },
-    ];
+    // Tìm KHÔNG PHÂN BIỆT DẤU: unaccent() bỏ dấu cả tên sách/tác giả LẪN từ khoá rồi mới ILIKE
+    // (vd gõ "dac nhan tam" vẫn khớp "Đắc Nhân Tâm"). Prisma không có unaccent() trong query
+    // builder nên dùng $queryRaw lấy danh sách id khớp; các bộ lọc còn lại (is_active, thể loại,
+    // giá, sort, phân trang) vẫn chạy bằng Prisma như cũ. ${like} được tagged-template tự
+    // tham số hoá → an toàn SQL injection.
+    const like = `%${query.q}%`;
+    const rows = await prisma.$queryRaw<{ id: number }[]>`
+      SELECT b."id" FROM "Book" b
+      LEFT JOIN "Author" a ON a."id" = b."author_id"
+      WHERE unaccent(b."title") ILIKE unaccent(${like})
+         OR unaccent(a."name") ILIKE unaccent(${like})
+    `;
+    where.id = { in: rows.map((r) => r.id) };
   }
 
   if (query.category) {

@@ -1,12 +1,17 @@
+import { Moon, Sun } from 'lucide-react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useTheme } from '../lib/theme'
 import Logo from './Logo'
 
 // Layout khu quản trị: khung RIÊNG (không dùng Navbar/Footer marketing) —
 // thanh top riêng + sidebar trái. NavLink tự thêm class "active" cho mục đang mở.
 export default function AdminLayout() {
   const { user, logout } = useAuth()
+  const { isDark, toggle } = useTheme()
   const navigate = useNavigate()
+  useDocumentTitle('Quản trị')
 
   function handleLogout() {
     logout()
@@ -23,6 +28,13 @@ export default function AdminLayout() {
           </Link>
           <span className="badge badge-neutral badge-sm">Khu quản trị</span>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={toggle}
+              aria-label="Chuyển giao diện sáng/tối"
+              className="btn btn-ghost btn-sm btn-circle"
+            >
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             <Link to="/" className="btn btn-ghost btn-sm">
               Về cửa hàng
             </Link>

@@ -1,10 +1,12 @@
 import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import Logo from './Logo'
 
 // Khung 2 cột dùng chung cho mọi trang xác thực (Login/Register/Forgot/Reset/Verify):
 // panel thương hiệu bên trái (ẩn trên mobile) + khu form bên phải.
 export default function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
+  useDocumentTitle(title) // tiêu đề tab theo từng trang auth (Đăng nhập/Đăng ký/...)
   return (
     <div className="px-4 py-10">
       <div className="max-w-4xl mx-auto grid md:grid-cols-2 rounded-box overflow-hidden border border-base-300 shadow-sm">

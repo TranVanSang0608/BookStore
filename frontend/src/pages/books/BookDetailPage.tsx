@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ShoppingCart } from 'lucide-react'
+import { Minus, Plus, ShoppingCart } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchBookBySlug } from '../../api/books'
@@ -10,6 +10,7 @@ import ReviewsSection from '../../features/catalog/ReviewsSection'
 import Stars from '../../features/catalog/Stars'
 import WishlistButton from '../../features/catalog/WishlistButton'
 import { useCart } from '../../hooks/useCart'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatPrice } from '../../lib/format'
 
 // Khối chọn số lượng + nút thêm giỏ — tách component để state (qty, thông báo)
@@ -22,6 +23,11 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
   const [adding, setAdding] = useState(false)
 
   const maxQty = Math.min(stock, 99)
+
+  // Clamp số lượng 1..maxQty (dùng cho cả nút −/+ lẫn gõ tay)
+  function clampQty(v: number) {
+    setQty(Number.isInteger(v) ? Math.min(Math.max(v, 1), maxQty) : 1)
+  }
 
   async function handleAdd() {
     setMessage('')
@@ -49,18 +55,36 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
-        <input
-          type="number"
-          min={1}
-          max={maxQty}
-          className="input input-bordered w-20"
-          value={qty}
-          onChange={(e) => {
-            // Clamp ngay khi nhập: 1 ≤ qty ≤ min(tồn kho, 99)
-            const value = Number(e.target.value)
-            setQty(Number.isInteger(value) ? Math.min(Math.max(value, 1), maxQty) : 1)
-          }}
-        />
+        {/* Stepper số lượng: nút − [ô số] + */}
+        <div className="join border border-base-300 rounded-lg">
+          <button
+            type="button"
+            className="join-item btn btn-sm btn-ghost"
+            onClick={() => clampQty(qty - 1)}
+            disabled={qty <= 1}
+            aria-label="Giảm số lượng"
+          >
+            <Minus size={16} />
+          </button>
+          <input
+            type="number"
+            min={1}
+            max={maxQty}
+            className="join-item input input-sm w-14 text-center"
+            value={qty}
+            onChange={(e) => clampQty(Number(e.target.value))}
+            aria-label="Số lượng"
+          />
+          <button
+            type="button"
+            className="join-item btn btn-sm btn-ghost"
+            onClick={() => clampQty(qty + 1)}
+            disabled={qty >= maxQty}
+            aria-label="Tăng số lượng"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
         <button className="btn btn-primary gap-2" onClick={handleAdd} disabled={adding}>
           {adding ? <span className="loading loading-spinner loading-sm" /> : <ShoppingCart size={18} />}
           Thêm vào giỏ
@@ -80,6 +104,7 @@ export default function BookDetailPage() {
     queryKey: ['book', slug],
     queryFn: () => fetchBookBySlug(slug!),
   })
+  useDocumentTitle(book?.title) // load xong → tab hiện tên sách
 
   if (isPending) {
     return (

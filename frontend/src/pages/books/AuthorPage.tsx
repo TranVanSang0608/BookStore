@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { fetchAuthor } from '../../api/authors'
 import BookCard from '../../features/catalog/BookCard'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 
 export default function AuthorPage() {
   const { id } = useParams()
@@ -10,6 +11,7 @@ export default function AuthorPage() {
     queryKey: ['author', id],
     queryFn: () => fetchAuthor(Number(id)),
   })
+  useDocumentTitle(author?.name)
 
   if (isPending) {
     return (
@@ -29,7 +31,7 @@ export default function AuthorPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-6">
-      <div className="card bg-base-100 shadow">
+      <div className="card bg-base-100 border border-base-300">
         <div className="card-body flex-row items-center gap-6">
           {author.photo_url ? (
             <img
@@ -43,14 +45,14 @@ export default function AuthorPage() {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold">{author.name}</h1>
+            <h1 className="font-serif text-3xl font-semibold text-base-content">{author.name}</h1>
             {author.bio && <p className="text-base-content/70 mt-1">{author.bio}</p>}
           </div>
         </div>
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-xl font-semibold">Sách của {author.name}</h2>
+        <h2 className="font-serif text-2xl font-semibold text-base-content">Sách của {author.name}</h2>
         {author.books.length === 0 ? (
           <p className="text-base-content/60">Chưa có sách nào đang bán</p>
         ) : (

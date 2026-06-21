@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom'
 import { fetchWishlist } from '../../api/wishlist'
 import EmptyState from '../../components/EmptyState'
 import BookCard from '../../features/catalog/BookCard'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 
 // Trang sách đã thích — nằm trong RequireAuth (dữ liệu riêng của user)
 export default function WishlistPage() {
   const { data: books, isPending } = useQuery({ queryKey: ['wishlist'], queryFn: fetchWishlist })
+  useDocumentTitle('Sách yêu thích')
 
   if (isPending) {
     return (

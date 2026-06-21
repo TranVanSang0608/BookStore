@@ -24,9 +24,10 @@ function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code: unknown }).code === 'P2002';
 }
 
-// Include dùng chung cho trang chi tiết đơn: các dòng hàng (snapshot) + payment
+// Include dùng chung cho trang chi tiết đơn: các dòng hàng (snapshot) + payment.
+// Kèm book.slug để FE link dòng hàng sang trang chi tiết sách (book = null nếu sách đã bị xóa).
 const orderDetailInclude = {
-  items: { orderBy: { id: 'asc' } },
+  items: { orderBy: { id: 'asc' }, include: { book: { select: { slug: true } } } },
   payments: { orderBy: { id: 'asc' } },
 } satisfies Prisma.OrderInclude;
 

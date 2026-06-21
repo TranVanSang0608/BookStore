@@ -9,6 +9,7 @@ import EmptyState from '../../components/EmptyState'
 import CoverImage from '../../features/catalog/CoverImage'
 import { useAuth } from '../../hooks/useAuth'
 import { useCart } from '../../hooks/useCart'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatPrice } from '../../lib/format'
 
 // Một dòng hiển thị trên trang giỏ, đã quy về cùng shape cho cả 2 chế độ.
@@ -26,6 +27,7 @@ export default function CartPage() {
   const { items, updateQty, removeItem } = useCart()
   const navigate = useNavigate()
   const [error, setError] = useState('')
+  useDocumentTitle('Giỏ hàng')
 
   // Chế độ user: giỏ enrich sẵn từ server (kèm is_active + subtotal do BE tính)
   const { data: serverCart, isPending: serverPending } = useQuery({

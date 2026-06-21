@@ -6,6 +6,7 @@ import { fetchBestsellers, fetchBooks } from '../../api/books'
 import { fetchCategories } from '../../api/categories'
 import BookCard from '../../features/catalog/BookCard'
 import BookCardSkeleton from '../../features/catalog/BookCardSkeleton'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 
 // Tiêu đề của một khối (mắt-trên nhỏ + tên + link "Xem tất cả")
 function SectionHead({ eyebrow, title, to }: { eyebrow: string; title: string; to: string }) {
@@ -50,6 +51,7 @@ function ValueProp({ icon, title, desc }: { icon: ReactNode; title: string; desc
 
 export default function HomePage() {
   const navigate = useNavigate()
+  useDocumentTitle() // trang chủ → tiêu đề thương hiệu mặc định
 
   // Sách mới: 10 cuốn mới nhất (sort mặc định = newest). total dùng cho số liệu hero.
   const { data: newBooks, isPending: newPending } = useQuery({

@@ -105,16 +105,34 @@ const CATEGORIES = [
 ];
 
 const AUTHORS = [
-  'Nguyễn Nhật Ánh',
-  'Tô Hoài',
-  'Dale Carnegie',
-  'Paulo Coelho',
-  'Rosie Nguyễn',
-  'Yuval Noah Harari',
+  // có sẵn từ trước
+  'Nguyễn Nhật Ánh', 'Tô Hoài', 'Dale Carnegie', 'Paulo Coelho', 'Rosie Nguyễn', 'Yuval Noah Harari',
+  // bổ sung Phase 10
+  'Vũ Trọng Phụng', 'Nam Cao', 'Ngô Tất Tố', 'Bảo Ninh', 'Nguyễn Ngọc Tư', 'Nguyễn Du',
+  'Antoine de Saint-Exupéry', 'Ayn Rand', 'Ernest Hemingway', 'Victor Hugo', 'Gabriel García Márquez',
+  'Haruki Murakami', 'F. Scott Fitzgerald', 'Kuroyanagi Tetsuko', 'Luis Sepúlveda', 'Hector Malot',
+  'Phùng Quán', 'Trần Đăng Khoa', 'Adam Khoo', 'Stephen Covey', 'Robin Sharma', 'Trác Nhã',
+  'David J. Lieberman', 'Charles Duhigg', 'Robert Kiyosaki', 'George S. Clason', 'Napoleon Hill',
+  'Eric Ries', 'Daniel Kahneman', 'Minh Niệm', 'Nguyên Phong', 'Kishimi Ichiro', 'Eckhart Tolle',
+  'Stephen Hawking', 'Richard Dawkins', 'Trần Trọng Kim', 'Jared Diamond', 'Fujiko F. Fujio',
+  'Aoyama Gosho', 'Lê Linh', 'Eiichiro Oda',
 ];
 
-// slug sách là unique key để upsert; price đơn vị đồng (VND)
-const BOOKS = [
+// slug sách là unique key để upsert; price đơn vị đồng (VND).
+// publisher/published_year/pages tuỳ chọn — đổ vào tab "Thông tin" trang chi tiết cho đầy đặn.
+type SeedBook = {
+  title: string;
+  slug: string;
+  author: string;
+  price: number;
+  stock: number;
+  categories: string[];
+  description: string;
+  publisher?: string;
+  published_year?: number;
+  pages?: number;
+};
+const BOOKS: SeedBook[] = [
   { title: 'Mắt Biếc', slug: 'mat-biec', author: 'Nguyễn Nhật Ánh', price: 110_000, stock: 50, categories: ['van-hoc'], description: 'Tiểu thuyết về mối tình đơn phương của Ngạn dành cho Hà Lan, từ làng Đo Đo đến thành phố.' },
   { title: 'Cho Tôi Xin Một Vé Đi Tuổi Thơ', slug: 'cho-toi-xin-mot-ve-di-tuoi-tho', author: 'Nguyễn Nhật Ánh', price: 80_000, stock: 60, categories: ['van-hoc', 'thieu-nhi'], description: 'Chuyến tàu về tuổi thơ qua góc nhìn của cu Mùi và nhóm bạn thân.' },
   { title: 'Tôi Thấy Hoa Vàng Trên Cỏ Xanh', slug: 'toi-thay-hoa-vang-tren-co-xanh', author: 'Nguyễn Nhật Ánh', price: 125_000, stock: 40, categories: ['van-hoc'], description: 'Tuổi thơ nghèo khó mà trong trẻo ở một làng quê miền Trung.' },
@@ -127,6 +145,65 @@ const BOOKS = [
   { title: 'Tuổi Trẻ Đáng Giá Bao Nhiêu', slug: 'tuoi-tre-dang-gia-bao-nhieu', author: 'Rosie Nguyễn', price: 90_000, stock: 65, categories: ['ky-nang-song'], description: 'Học, làm, đi — ba trụ cột để tuổi trẻ không trôi qua lãng phí.' },
   { title: 'Sapiens: Lược Sử Loài Người', slug: 'sapiens-luoc-su-loai-nguoi', author: 'Yuval Noah Harari', price: 299_000, stock: 25, categories: ['khoa-hoc', 'lich-su'], description: 'Lịch sử loài người từ cách mạng nhận thức đến cách mạng khoa học.' },
   { title: 'Homo Deus: Lược Sử Tương Lai', slug: 'homo-deus-luoc-su-tuong-lai', author: 'Yuval Noah Harari', price: 269_000, stock: 25, categories: ['khoa-hoc'], description: 'Tương lai nhân loại khi công nghệ và dữ liệu định hình lại xã hội.' },
+
+  // ===== Sách mẫu bổ sung (Phase 10 — cho cửa hàng đầy đặn khi demo) =====
+  // -- Văn học --
+  { title: 'Số Đỏ', slug: 'so-do', author: 'Vũ Trọng Phụng', price: 75_000, stock: 50, categories: ['van-hoc'], description: 'Tiểu thuyết trào phúng kinh điển về Xuân Tóc Đỏ và xã hội thượng lưu lố lăng đầu thế kỷ 20.', publisher: 'NXB Văn Học', published_year: 2020, pages: 260 },
+  { title: 'Chí Phèo', slug: 'chi-pheo', author: 'Nam Cao', price: 65_000, stock: 45, categories: ['van-hoc'], description: 'Tuyển tập truyện ngắn Nam Cao — bi kịch của người nông dân bị tha hóa qua hình tượng Chí Phèo.', publisher: 'NXB Văn Học', published_year: 2019, pages: 220 },
+  { title: 'Tắt Đèn', slug: 'tat-den', author: 'Ngô Tất Tố', price: 60_000, stock: 40, categories: ['van-hoc'], description: 'Số phận chị Dậu giữa sưu cao thuế nặng — bức tranh nông thôn Việt Nam trước Cách mạng.', publisher: 'NXB Văn Học', published_year: 2018, pages: 200 },
+  { title: 'Nỗi Buồn Chiến Tranh', slug: 'noi-buon-chien-tranh', author: 'Bảo Ninh', price: 120_000, stock: 35, categories: ['van-hoc'], description: 'Ký ức chiến tranh ám ảnh của người lính Kiên — tác phẩm được dịch ra nhiều thứ tiếng.', publisher: 'NXB Trẻ', published_year: 2021, pages: 320 },
+  { title: 'Cánh Đồng Bất Tận', slug: 'canh-dong-bat-tan', author: 'Nguyễn Ngọc Tư', price: 88_000, stock: 50, categories: ['van-hoc'], description: 'Những phận người trôi nổi nơi sông nước miền Tây Nam Bộ.', publisher: 'NXB Trẻ', published_year: 2022, pages: 215 },
+  { title: 'Truyện Kiều', slug: 'truyen-kieu', author: 'Nguyễn Du', price: 95_000, stock: 60, categories: ['van-hoc'], description: 'Kiệt tác thơ Nôm về cuộc đời mười lăm năm lưu lạc của Thúy Kiều.', publisher: 'NXB Văn Học', published_year: 2020, pages: 400 },
+  { title: 'Hoàng Tử Bé', slug: 'hoang-tu-be', author: 'Antoine de Saint-Exupéry', price: 68_000, stock: 80, categories: ['van-hoc', 'thieu-nhi'], description: 'Câu chuyện trong trẻo và sâu lắng về tình yêu, sự ngây thơ và những điều thật sự quan trọng.', publisher: 'Nhã Nam', published_year: 2022, pages: 120 },
+  { title: 'Suối Nguồn', slug: 'suoi-nguon', author: 'Ayn Rand', price: 215_000, stock: 20, categories: ['van-hoc'], description: 'Hành trình của kiến trúc sư Howard Roark — đề cao chủ nghĩa cá nhân và sự chính trực.', publisher: 'NXB Trẻ', published_year: 2021, pages: 1200 },
+  { title: 'Ông Già Và Biển Cả', slug: 'ong-gia-va-bien-ca', author: 'Ernest Hemingway', price: 72_000, stock: 40, categories: ['van-hoc'], description: 'Cuộc chiến đơn độc của ông lão Santiago với con cá kiếm khổng lồ giữa đại dương.', publisher: 'Nhã Nam', published_year: 2019, pages: 150 },
+  { title: 'Những Người Khốn Khổ', slug: 'nhung-nguoi-khon-kho', author: 'Victor Hugo', price: 320_000, stock: 25, categories: ['van-hoc'], description: 'Bản trường ca về lòng nhân ái qua cuộc đời Jean Valjean trong xã hội Pháp thế kỷ 19.', publisher: 'NXB Văn Học', published_year: 2020, pages: 1700 },
+  { title: 'Trăm Năm Cô Đơn', slug: 'tram-nam-co-don', author: 'Gabriel García Márquez', price: 175_000, stock: 30, categories: ['van-hoc'], description: 'Bảy thế hệ dòng họ Buendía ở làng Macondo — đỉnh cao của hiện thực huyền ảo.', publisher: 'Nhã Nam', published_year: 2021, pages: 500 },
+  { title: 'Rừng Na Uy', slug: 'rung-na-uy', author: 'Haruki Murakami', price: 135_000, stock: 40, categories: ['van-hoc'], description: 'Tình yêu, mất mát và tuổi trẻ của Toru Watanabe ở Tokyo những năm 1960.', publisher: 'Nhã Nam', published_year: 2022, pages: 380 },
+  { title: 'Đại Gia Gatsby', slug: 'dai-gia-gatsby', author: 'F. Scott Fitzgerald', price: 90_000, stock: 35, categories: ['van-hoc'], description: 'Giấc mơ Mỹ và sự phù phiếm của thời đại nhạc Jazz qua nhân vật Jay Gatsby.', publisher: 'Nhã Nam', published_year: 2020, pages: 240 },
+
+  // -- Thiếu nhi --
+  { title: 'Totto-chan Bên Cửa Sổ', slug: 'totto-chan-ben-cua-so', author: 'Kuroyanagi Tetsuko', price: 98_000, stock: 60, categories: ['thieu-nhi'], description: 'Ngôi trường Tomoe đặc biệt và tuổi thơ hồn nhiên của cô bé Totto-chan.', publisher: 'NXB Hội Nhà Văn', published_year: 2022, pages: 290 },
+  { title: 'Chuyện Con Mèo Dạy Hải Âu Bay', slug: 'chuyen-con-meo-day-hai-au-bay', author: 'Luis Sepúlveda', price: 56_000, stock: 70, categories: ['thieu-nhi'], description: 'Lời hứa của chú mèo Zorba với chú hải âu — câu chuyện đẹp về tình yêu thương và lời hứa.', publisher: 'Nhã Nam', published_year: 2021, pages: 130 },
+  { title: 'Không Gia Đình', slug: 'khong-gia-dinh', author: 'Hector Malot', price: 145_000, stock: 30, categories: ['thieu-nhi', 'van-hoc'], description: 'Hành trình lưu lạc đầy nghị lực của cậu bé Rémi đi tìm gia đình.', publisher: 'NXB Kim Đồng', published_year: 2020, pages: 450 },
+  { title: 'Tuổi Thơ Dữ Dội', slug: 'tuoi-tho-du-doi', author: 'Phùng Quán', price: 160_000, stock: 40, categories: ['thieu-nhi', 'van-hoc'], description: 'Những thiếu niên trinh sát quả cảm trong kháng chiến chống Pháp ở Huế.', publisher: 'NXB Kim Đồng', published_year: 2021, pages: 600 },
+  { title: 'Góc Sân Và Khoảng Trời', slug: 'goc-san-va-khoang-troi', author: 'Trần Đăng Khoa', price: 52_000, stock: 55, categories: ['thieu-nhi'], description: 'Tập thơ trong trẻo viết từ thuở "thần đồng thơ" của Trần Đăng Khoa.', publisher: 'NXB Kim Đồng', published_year: 2019, pages: 160 },
+
+  // -- Kỹ năng sống --
+  { title: 'Tôi Tài Giỏi, Bạn Cũng Thế', slug: 'toi-tai-gioi-ban-cung-the', author: 'Adam Khoo', price: 110_000, stock: 70, categories: ['ky-nang-song'], description: 'Phương pháp học tập và tư duy giúp học sinh phát huy tối đa tiềm năng.', publisher: 'First News', published_year: 2022, pages: 350 },
+  { title: '7 Thói Quen Hiệu Quả', slug: '7-thoi-quen-hieu-qua', author: 'Stephen Covey', price: 138_000, stock: 50, categories: ['ky-nang-song'], description: 'Bảy thói quen nền tảng để sống chủ động, hiệu quả và cân bằng.', publisher: 'First News', published_year: 2021, pages: 430 },
+  { title: 'Đời Ngắn Đừng Ngủ Dài', slug: 'doi-ngan-dung-ngu-dai', author: 'Robin Sharma', price: 75_000, stock: 60, categories: ['ky-nang-song'], description: 'Những bài học ngắn gọn truyền cảm hứng sống trọn vẹn từng ngày.', publisher: 'First News', published_year: 2020, pages: 220 },
+  { title: 'Khéo Ăn Nói Sẽ Có Được Thiên Hạ', slug: 'kheo-an-noi-se-co-duoc-thien-ha', author: 'Trác Nhã', price: 99_000, stock: 55, categories: ['ky-nang-song'], description: 'Nghệ thuật giao tiếp ứng xử để thành công trong công việc và cuộc sống.', publisher: 'NXB Tổng Hợp', published_year: 2021, pages: 380 },
+  { title: 'Đọc Vị Bất Kỳ Ai', slug: 'doc-vi-bat-ky-ai', author: 'David J. Lieberman', price: 79_000, stock: 50, categories: ['ky-nang-song', 'tam-ly'], description: 'Kỹ thuật phân tích tâm lý để hiểu suy nghĩ và ý định của người đối diện.', publisher: 'NXB Lao Động', published_year: 2020, pages: 250 },
+  { title: 'Sức Mạnh Của Thói Quen', slug: 'suc-manh-cua-thoi-quen', author: 'Charles Duhigg', price: 129_000, stock: 40, categories: ['ky-nang-song'], description: 'Cơ chế hình thành thói quen và cách thay đổi chúng để cải thiện cuộc sống.', publisher: 'First News', published_year: 2022, pages: 400 },
+
+  // -- Kinh tế --
+  { title: 'Dạy Con Làm Giàu (Tập 1)', slug: 'day-con-lam-giau-tap-1', author: 'Robert Kiyosaki', price: 108_000, stock: 60, categories: ['kinh-te'], description: 'Tư duy về tiền bạc và tài sản qua hai người cha "giàu" và "nghèo".', publisher: 'NXB Trẻ', published_year: 2021, pages: 280 },
+  { title: 'Người Giàu Có Nhất Thành Babylon', slug: 'nguoi-giau-co-nhat-thanh-babylon', author: 'George S. Clason', price: 72_000, stock: 65, categories: ['kinh-te'], description: 'Những bài học quản lý tài chính cá nhân qua các câu chuyện cổ thành Babylon.', publisher: 'First News', published_year: 2020, pages: 200 },
+  { title: 'Nghĩ Giàu Làm Giàu', slug: 'nghi-giau-lam-giau', author: 'Napoleon Hill', price: 98_000, stock: 50, categories: ['kinh-te'], description: 'Triết lý thành công và làm giàu đúc kết từ hàng trăm doanh nhân.', publisher: 'First News', published_year: 2021, pages: 320 },
+  { title: 'Khởi Nghiệp Tinh Gọn', slug: 'khoi-nghiep-tinh-gon', author: 'Eric Ries', price: 145_000, stock: 30, categories: ['kinh-te'], description: 'Phương pháp Lean Startup để xây dựng doanh nghiệp hiệu quả, ít rủi ro.', publisher: 'NXB Tổng Hợp', published_year: 2022, pages: 330 },
+  { title: 'Tư Duy Nhanh Và Chậm', slug: 'tu-duy-nhanh-va-cham', author: 'Daniel Kahneman', price: 189_000, stock: 35, categories: ['kinh-te', 'tam-ly', 'khoa-hoc'], description: 'Hai hệ thống tư duy chi phối quyết định của con người — Nobel Kinh tế 2002.', publisher: 'Nhã Nam', published_year: 2021, pages: 600 },
+
+  // -- Tâm lý --
+  { title: 'Hiểu Về Trái Tim', slug: 'hieu-ve-trai-tim', author: 'Minh Niệm', price: 115_000, stock: 45, categories: ['tam-ly'], description: 'Những trang viết chữa lành về cảm xúc, khổ đau và bình an nội tâm.', publisher: 'NXB Tổng Hợp', published_year: 2022, pages: 420 },
+  { title: 'Muôn Kiếp Nhân Sinh', slug: 'muon-kiep-nhan-sinh', author: 'Nguyên Phong', price: 156_000, stock: 50, categories: ['tam-ly'], description: 'Hành trình về luật nhân quả và sự tiến hóa của tâm thức con người.', publisher: 'First News', published_year: 2022, pages: 460 },
+  { title: 'Dám Bị Ghét', slug: 'dam-bi-ghet', author: 'Kishimi Ichiro', price: 99_000, stock: 55, categories: ['tam-ly'], description: 'Đối thoại về tâm lý học Adler — can đảm sống là chính mình.', publisher: 'NXB Lao Động', published_year: 2021, pages: 300 },
+  { title: 'Sức Mạnh Của Hiện Tại', slug: 'suc-manh-cua-hien-tai', author: 'Eckhart Tolle', price: 92_000, stock: 40, categories: ['tam-ly'], description: 'Hướng dẫn sống tỉnh thức và an trú trong khoảnh khắc hiện tại.', publisher: 'First News', published_year: 2020, pages: 260 },
+
+  // -- Khoa học --
+  { title: 'Lược Sử Thời Gian', slug: 'luoc-su-thoi-gian', author: 'Stephen Hawking', price: 128_000, stock: 40, categories: ['khoa-hoc'], description: 'Vũ trụ, hố đen và thời gian được giải thích dễ hiểu cho người đọc phổ thông.', publisher: 'NXB Trẻ', published_year: 2021, pages: 260 },
+  { title: 'Vũ Trụ Trong Vỏ Hạt Dẻ', slug: 'vu-tru-trong-vo-hat-de', author: 'Stephen Hawking', price: 135_000, stock: 30, categories: ['khoa-hoc'], description: 'Những khám phá vật lý hiện đại về không-thời gian và lý thuyết dây.', publisher: 'NXB Trẻ', published_year: 2021, pages: 220 },
+  { title: 'Gen Vị Kỷ', slug: 'gen-vi-ky', author: 'Richard Dawkins', price: 175_000, stock: 25, categories: ['khoa-hoc'], description: 'Góc nhìn tiến hóa lấy gen làm trung tâm — tác phẩm kinh điển của sinh học.', publisher: 'Nhã Nam', published_year: 2020, pages: 520 },
+
+  // -- Lịch sử --
+  { title: 'Việt Nam Sử Lược', slug: 'viet-nam-su-luoc', author: 'Trần Trọng Kim', price: 145_000, stock: 40, categories: ['lich-su'], description: 'Bộ thông sử Việt Nam súc tích, dễ đọc — công trình sử học nền tảng.', publisher: 'NXB Văn Học', published_year: 2020, pages: 600 },
+  { title: 'Súng, Vi Trùng Và Thép', slug: 'sung-vi-trung-va-thep', author: 'Jared Diamond', price: 198_000, stock: 30, categories: ['lich-su', 'khoa-hoc'], description: 'Vì sao một số nền văn minh thống trị các nền văn minh khác — Pulitzer 1998.', publisher: 'Nhã Nam', published_year: 2021, pages: 550 },
+
+  // -- Truyện tranh --
+  { title: 'Doraemon (Tập 1)', slug: 'doraemon-tap-1', author: 'Fujiko F. Fujio', price: 18_000, stock: 100, categories: ['truyen-tranh', 'thieu-nhi'], description: 'Chú mèo máy Doraemon và những bảo bối thần kỳ giúp đỡ Nobita.', publisher: 'NXB Kim Đồng', published_year: 2022, pages: 192 },
+  { title: 'Thám Tử Lừng Danh Conan (Tập 1)', slug: 'tham-tu-lung-danh-conan-tap-1', author: 'Aoyama Gosho', price: 20_000, stock: 90, categories: ['truyen-tranh'], description: 'Conan trong hình hài cậu bé phá giải những vụ án hóc búa.', publisher: 'NXB Kim Đồng', published_year: 2022, pages: 184 },
+  { title: 'Thần Đồng Đất Việt (Tập 1)', slug: 'than-dong-dat-viet-tap-1', author: 'Lê Linh', price: 18_000, stock: 85, categories: ['truyen-tranh', 'thieu-nhi'], description: 'Trạng Tí thông minh cùng nhóm bạn trong bộ truyện tranh Việt nổi tiếng.', publisher: 'NXB Trẻ', published_year: 2021, pages: 160 },
+  { title: 'One Piece (Tập 1)', slug: 'one-piece-tap-1', author: 'Eiichiro Oda', price: 20_000, stock: 80, categories: ['truyen-tranh'], description: 'Hành trình tìm kho báu One Piece của Luffy và băng hải tặc Mũ Rơm.', publisher: 'NXB Kim Đồng', published_year: 2022, pages: 200 },
 ];
 
 async function seedCatalog() {
@@ -155,6 +232,9 @@ async function seedCatalog() {
         price: b.price,
         stock_quantity: b.stock,
         author_id: authorIds.get(b.author)!,
+        publisher: b.publisher, // undefined cho sách cũ chưa có → Prisma bỏ qua (cột optional)
+        published_year: b.published_year,
+        pages: b.pages,
       },
     });
 

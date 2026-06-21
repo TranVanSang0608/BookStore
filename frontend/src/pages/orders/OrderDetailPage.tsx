@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { cancelOrderApi, fetchOrderByCode, startVnpayPaymentApi } from '../../api/orders'
 import { getApiErrorMessage } from '../../api/client'
 import CoverImage from '../../features/catalog/CoverImage'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatDateTime, formatPrice } from '../../lib/format'
 import {
   ORDER_STATUS_META,
@@ -22,6 +23,7 @@ export default function OrderDetailPage() {
     queryKey: ['order', code],
     queryFn: () => fetchOrderByCode(code!),
   })
+  useDocumentTitle(order ? `Đơn ${order.order_code}` : 'Đơn hàng')
 
   const cancelMutation = useMutation({
     mutationFn: () => cancelOrderApi(code!),
@@ -180,7 +182,17 @@ export default function OrderDetailPage() {
                     />
                   </td>
                   <td>
-                    <p className="font-medium">{item.book_title}</p>
+                    {/* Sách còn tồn tại → link sang chi tiết; đã xóa (book null) → chữ thường */}
+                    {item.book ? (
+                      <Link
+                        to={`/books/${item.book.slug}`}
+                        className="font-medium hover:text-primary"
+                      >
+                        {item.book_title}
+                      </Link>
+                    ) : (
+                      <p className="font-medium">{item.book_title}</p>
+                    )}
                     <p className="text-sm text-base-content/60">{item.book_author_name}</p>
                   </td>
                   <td className="whitespace-nowrap">{formatPrice(item.price_at_order)}</td>
@@ -200,7 +212,7 @@ export default function OrderDetailPage() {
           ← Đơn hàng của tôi
         </Link>
         {/* User chỉ hủy được khi đơn còn Pending (chờ xác nhận) */}
-        {order.status === 'Pending' && (
+        {order.status === 'Pending' && !order.payments.some((p) => p.status === 'Paid') && (
           <button
             className="btn btn-error btn-outline"
             disabled={cancelMutation.isPending}

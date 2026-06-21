@@ -6,10 +6,12 @@ import { fetchMyOrders } from '../../api/orders'
 import EmptyState from '../../components/EmptyState'
 import Pagination from '../../features/catalog/Pagination'
 import { formatDateTime, formatPrice } from '../../lib/format'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { ORDER_STATUS_META } from '../../lib/order-status'
 
 export default function OrdersPage() {
   const [page, setPage] = useState(1)
+  useDocumentTitle('Đơn hàng của tôi')
 
   const { data, isPending } = useQuery({
     queryKey: ['my-orders', page],

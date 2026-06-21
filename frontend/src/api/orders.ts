@@ -10,6 +10,7 @@ export interface OrderItem {
   price_at_order: number
   cover_image_url_snapshot: string | null
   quantity: number
+  book: { slug: string } | null // sách hiện tại (slug để link sang chi tiết); null nếu đã xóa
 }
 
 export interface OrderPayment {

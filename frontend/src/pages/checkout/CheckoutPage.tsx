@@ -2,11 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchAddresses } from '../../api/addresses'
+import AddressForm from '../profile/AddressForm'
 import { fetchCart } from '../../api/cart'
 import { getApiErrorMessage } from '../../api/client'
 import { createOrderApi } from '../../api/orders'
 import { fetchShippingFee } from '../../api/shipping'
 import { previewVoucherApi, type VoucherPreview } from '../../api/vouchers'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatPrice } from '../../lib/format'
 
 // Trang checkout: chọn địa chỉ → xem phí ship theo zone + tổng tiền → đặt đơn (COD).
@@ -19,8 +21,10 @@ export default function CheckoutPage() {
   // Voucher (Phase 7): ô nhập + mã đã áp (preview từ server). null = chưa áp mã nào.
   const [voucherCode, setVoucherCode] = useState('')
   const [applied, setApplied] = useState<VoucherPreview | null>(null)
+  const [showAddrForm, setShowAddrForm] = useState(false) // mở form thêm địa chỉ ngay tại checkout
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  useDocumentTitle('Đặt hàng')
 
   const { data: cart, isPending: cartPending } = useQuery({
     queryKey: ['cart'],
@@ -163,6 +167,19 @@ export default function CheckoutPage() {
                 </div>
               </label>
             ))}
+
+            {/* Thêm địa chỉ mới ngay tại đây — lưu xong invalidate ['addresses'] → danh sách tự refresh */}
+            {showAddrForm ? (
+              <AddressForm onClose={() => setShowAddrForm(false)} />
+            ) : (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm w-fit text-primary"
+                onClick={() => setShowAddrForm(true)}
+              >
+                + Thêm địa chỉ mới
+              </button>
+            )}
           </div>
         </div>
 

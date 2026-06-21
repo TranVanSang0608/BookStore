@@ -50,6 +50,8 @@ export default function AdminOrderDetailPage() {
 
   const meta = ORDER_STATUS_META[order.status]
   const nextStatus = ADMIN_NEXT_STATUS[order.status] // bước tiến hợp lệ kế tiếp (nếu có)
+  // Đơn đã thu tiền (VNPay Paid) → backend chặn hủy (refund ngoài scope) → ẩn nút Hủy
+  const isPaid = order.payments.some((p) => p.status === 'Paid')
 
   return (
     <div className="space-y-4">
@@ -77,7 +79,7 @@ export default function AdminOrderDetailPage() {
               {ADVANCE_LABEL[nextStatus]}
             </button>
           )}
-          {isCancellable(order.status) && (
+          {isCancellable(order.status) && !isPaid && (
             <button
               className="btn btn-error btn-outline btn-sm"
               disabled={statusMutation.isPending}
