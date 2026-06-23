@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { getApiErrorMessage } from '../../api/client'
 import { updateProfileApi } from '../../api/user'
 import { useAuth } from '../../hooks/useAuth'
-import { profileFormSchema, zodErrorsToMap } from '../../lib/validation'
+import { focusFirstError, profileFormSchema, zodErrorsToMap } from '../../lib/validation'
 
 export default function ProfileInfoForm() {
   const { user, updateUser } = useAuth()
@@ -21,7 +21,9 @@ export default function ProfileInfoForm() {
     e.preventDefault()
     const result = profileFormSchema.safeParse({ name, phone })
     if (!result.success) {
-      setFieldErrors(zodErrorsToMap(result.error))
+      const errors = zodErrorsToMap(result.error)
+      setFieldErrors(errors)
+      focusFirstError(['name', 'phone'], errors, (f) => `profile_${f}`)
       return
     }
     setFieldErrors({})
@@ -40,8 +42,15 @@ export default function ProfileInfoForm() {
 
         <form onSubmit={handleSubmit} className="space-y-3" noValidate>
           <div>
-            <label className="label">Email (không thể thay đổi)</label>
-            <input className="input input-bordered w-full" value={user?.email ?? ''} disabled />
+            <label className="label" htmlFor="profile_email">Email (không thể thay đổi)</label>
+            <input
+              id="profile_email"
+              type="email"
+              autoComplete="email"
+              className="input input-bordered w-full"
+              value={user?.email ?? ''}
+              disabled
+            />
           </div>
 
           <div>
@@ -50,6 +59,7 @@ export default function ProfileInfoForm() {
             </label>
             <input
               id="profile_name"
+              autoComplete="name"
               className="input input-bordered w-full"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -64,6 +74,7 @@ export default function ProfileInfoForm() {
             <input
               id="profile_phone"
               type="tel"
+              autoComplete="tel"
               className="input input-bordered w-full"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}

@@ -50,7 +50,7 @@ export default function WishlistButton({ bookId, className = '' }: { bookId: num
       <Heart
         size={16}
         fill={wishlisted ? 'currentColor' : 'none'}
-        className={wishlisted ? 'text-secondary' : 'text-base-content/50'}
+        className={wishlisted ? 'text-secondary' : 'text-base-content/70'}
       />
     </button>
   )

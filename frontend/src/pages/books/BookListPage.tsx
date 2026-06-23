@@ -64,7 +64,7 @@ export default function BookListPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <nav aria-label="Breadcrumb" className="text-sm text-base-content/50 mb-2 flex gap-2 items-center">
+      <nav aria-label="Breadcrumb" className="text-sm text-base-content/70 mb-2 flex gap-2 items-center">
         <Link to="/" className="hover:text-primary">
           Trang chủ
         </Link>
@@ -72,7 +72,7 @@ export default function BookListPage() {
         <span className="text-base-content/70">Tất cả sách</span>
       </nav>
       <h1 className="font-serif text-3xl font-semibold text-base-content">Kho sách</h1>
-      <p className="text-base-content/60 mt-1 mb-6">Lọc nhanh theo thể loại và mức giá.</p>
+      <p className="text-base-content/70 mt-1 mb-6">Lọc nhanh theo thể loại và mức giá.</p>
 
       <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
         {/* key = state cục bộ của BookFilters (ô search + khoảng giá): URL đổi mà không qua
@@ -94,14 +94,14 @@ export default function BookListPage() {
         <div>
           {/* Thanh công cụ: số kết quả + sắp xếp */}
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <div className="text-sm text-base-content/60">
+            <div className="text-sm text-base-content/70">
               {data && (
                 <>
                   Hiển thị <strong className="text-base-content">{data.total}</strong> kết quả
                 </>
               )}
             </div>
-            <label className="flex items-center gap-2 text-sm text-base-content/60">
+            <label className="flex items-center gap-2 text-sm text-base-content/70">
               Sắp xếp
               <select
                 value={params.sort ?? ''}

@@ -44,7 +44,7 @@ export default function ProfilePage() {
               {user?.name?.charAt(0).toUpperCase() ?? '?'}
             </div>
             <p className="font-semibold mt-3">{user?.name}</p>
-            <p className="text-xs text-base-content/60 break-all">{user?.email}</p>
+            <p className="text-xs text-base-content/70 break-all">{user?.email}</p>
 
             {/* Trạng thái xác minh email */}
             {user?.email_verified ? (

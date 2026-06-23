@@ -87,7 +87,7 @@ export default function Navbar() {
           onSubmit={handleSearch}
           className="flex-1 hidden md:flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2 max-w-xl"
         >
-          <Search size={17} className="text-base-content/50 shrink-0" />
+          <Search size={17} className="text-base-content/70 shrink-0" />
           <input
             name="q"
             aria-label="Tìm sách"
@@ -108,7 +108,8 @@ export default function Navbar() {
           <Link
             to="/cart"
             aria-label="Giỏ hàng"
-            className="btn btn-ghost btn-circle btn-sm indicator"
+            // Mobile: ép vùng bấm ≥44px (min-w/h-11); desktop giữ btn-sm gọn (md:min-*-0)
+            className="btn btn-ghost btn-circle btn-sm indicator min-h-11 min-w-11 md:min-h-0 md:min-w-0"
           >
             {count > 0 && (
               <span className="indicator-item badge badge-primary badge-xs">{count}</span>
@@ -123,7 +124,7 @@ export default function Navbar() {
                 <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-semibold">
                   {user!.name.charAt(0).toUpperCase()}
                 </span>
-                <ChevronDown size={14} className="text-base-content/60" />
+                <ChevronDown size={14} className="text-base-content/70" />
               </div>
               <ul
                 tabIndex={0}
@@ -165,7 +166,8 @@ export default function Navbar() {
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Mở menu"
             aria-expanded={mobileOpen}
-            className="btn btn-ghost btn-circle btn-sm md:hidden"
+            // Chỉ hiện trên mobile → vùng bấm ≥44px cho ngón tay
+            className="btn btn-ghost btn-circle btn-sm md:hidden min-h-11 min-w-11"
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -209,7 +211,7 @@ export default function Navbar() {
             onSubmit={handleSearch}
             className="flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2"
           >
-            <Search size={17} className="text-base-content/50 shrink-0" />
+            <Search size={17} className="text-base-content/70 shrink-0" />
             <input
               name="q"
               aria-label="Tìm sách"
@@ -229,7 +231,7 @@ export default function Navbar() {
 
           {/* Thể loại */}
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-base-content/70 mb-2">
               Thể loại
             </div>
             <div className="flex flex-wrap gap-2">
@@ -238,7 +240,8 @@ export default function Navbar() {
                   key={c.id}
                   to={`/books?category=${c.slug}`}
                   onClick={() => setMobileOpen(false)}
-                  className="badge badge-lg badge-ghost"
+                  // Chip thể loại trong menu mobile: cao ≥44px + bo tròn, dễ chạm hơn badge nhỏ
+                  className="inline-flex items-center min-h-11 px-4 rounded-full border border-base-300 text-sm hover:border-primary hover:text-primary"
                 >
                   {c.name}
                 </Link>

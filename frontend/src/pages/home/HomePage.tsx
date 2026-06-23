@@ -6,6 +6,7 @@ import { fetchBestsellers, fetchBooks } from '../../api/books'
 import { fetchCategories } from '../../api/categories'
 import BookCard from '../../features/catalog/BookCard'
 import BookCardSkeleton from '../../features/catalog/BookCardSkeleton'
+import ErrorState from '../../components/ErrorState'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 
 // Tiêu đề của một khối (mắt-trên nhỏ + tên + link "Xem tất cả")
@@ -30,7 +31,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <div className="font-serif text-3xl font-bold text-base-content leading-none">{value}</div>
-      <div className="text-xs text-base-content/50 mt-1">{label}</div>
+      <div className="text-xs text-base-content/70 mt-1">{label}</div>
     </div>
   )
 }
@@ -43,7 +44,7 @@ function ValueProp({ icon, title, desc }: { icon: ReactNode; title: string; desc
       </span>
       <div>
         <div className="font-semibold text-sm text-base-content">{title}</div>
-        <div className="text-xs text-base-content/55">{desc}</div>
+        <div className="text-xs text-base-content/70">{desc}</div>
       </div>
     </div>
   )
@@ -54,7 +55,13 @@ export default function HomePage() {
   useDocumentTitle() // trang chủ → tiêu đề thương hiệu mặc định
 
   // Sách mới: 10 cuốn mới nhất (sort mặc định = newest). total dùng cho số liệu hero.
-  const { data: newBooks, isPending: newPending } = useQuery({
+  const {
+    data: newBooks,
+    isPending: newPending,
+    isError: newError,
+    isFetching: newFetching,
+    refetch: refetchNew,
+  } = useQuery({
     queryKey: ['books', { limit: '10' }],
     queryFn: () => fetchBooks({ limit: '10' }),
   })
@@ -100,7 +107,7 @@ export default function HomePage() {
               role="search"
               className="mt-6 flex items-center gap-2 bg-base-100 border border-base-300 rounded-full p-1.5 pl-5 max-w-lg shadow-sm"
             >
-              <Search size={18} className="text-base-content/50 shrink-0" />
+              <Search size={18} className="text-base-content/70 shrink-0" />
               <input
                 name="q"
                 aria-label="Tìm sách"
@@ -114,7 +121,7 @@ export default function HomePage() {
 
             {visibleCategories.length > 0 && (
               <div className="flex gap-2 mt-4 flex-wrap items-center">
-                <span className="text-sm text-base-content/50">Phổ biến:</span>
+                <span className="text-sm text-base-content/70">Phổ biến:</span>
                 {visibleCategories.slice(0, 4).map((c) => (
                   <Link
                     key={c.id}
@@ -174,6 +181,13 @@ export default function HomePage() {
                 <BookCardSkeleton key={i} />
               ))}
             </div>
+          ) : newError ? (
+            // Trước đây lỗi sẽ ra lưới RỖNG im lặng — giờ báo lỗi rõ + cho bấm thử lại
+            <ErrorState
+              title="Không tải được sách mới"
+              onRetry={() => refetchNew()}
+              retrying={newFetching}
+            />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {newBooks?.items.map((book) => (
@@ -200,7 +214,7 @@ export default function HomePage() {
                   <div className="font-serif font-semibold text-base-content leading-tight">
                     {c.name}
                   </div>
-                  <div className="text-xs text-base-content/50">{c.book_count ?? 0} cuốn</div>
+                  <div className="text-xs text-base-content/70">{c.book_count ?? 0} cuốn</div>
                 </Link>
               ))}
             </div>

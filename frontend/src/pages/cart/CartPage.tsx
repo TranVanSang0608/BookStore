@@ -135,7 +135,7 @@ export default function CartPage() {
               <span className="text-base-content/70">Tạm tính</span>
               <span className="font-bold text-primary">{formatPrice(subtotal)}</span>
             </div>
-            <p className="text-xs text-base-content/55 mb-4">
+            <p className="text-xs text-base-content/70 mb-4">
               Phí vận chuyển sẽ được tính ở bước đặt hàng.
             </p>
             <button
@@ -209,7 +209,7 @@ function CartRow({
         <Link to={`/books/${book.slug}`} className="font-medium hover:text-primary line-clamp-2">
           {book.title}
         </Link>
-        <p className="text-sm text-base-content/60">{book.author.name}</p>
+        <p className="text-sm text-base-content/70">{book.author.name}</p>
         <p className="text-sm text-primary font-semibold mt-0.5">{formatPrice(book.price)}</p>
         {overStock && (
           <p className="text-warning text-xs mt-1">

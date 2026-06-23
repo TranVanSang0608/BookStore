@@ -38,7 +38,7 @@ export default function AddressBook() {
         {isPending && <span className="loading loading-spinner" />}
 
         {addresses?.length === 0 && showForm === null && (
-          <p className="text-base-content/60">Chưa có địa chỉ nào — thêm để đặt hàng nhanh hơn.</p>
+          <p className="text-base-content/70">Chưa có địa chỉ nào — thêm để đặt hàng nhanh hơn.</p>
         )}
 
         <div className="space-y-3">
@@ -46,7 +46,7 @@ export default function AddressBook() {
             <div key={addr.id} className="border border-base-300 rounded-box p-4 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold">{addr.recipient_name}</span>
-                <span className="text-base-content/60">| {addr.phone}</span>
+                <span className="text-base-content/70">| {addr.phone}</span>
                 {addr.is_default && <span className="badge badge-primary badge-sm">Mặc định</span>}
               </div>
               <p className="text-sm text-base-content/80">

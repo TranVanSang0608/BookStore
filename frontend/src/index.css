@@ -26,8 +26,8 @@
   --color-primary-content: #f4eee2;
   --color-secondary: #7c3242; /* mận — màu phụ / giá KM */
   --color-secondary-content: #f8e9e9;
-  --color-accent: #b28b4c; /* vàng đồng — điểm nhấn "ánh sáng" */
-  --color-accent-content: #2e2316;
+  --color-accent: #8c6a2e; /* đồng đậm — điểm nhấn "ánh sáng" (đậm hơn #b28b4c để chữ accent đạt ~4.7:1 WCAG AA) */
+  --color-accent-content: #f4eee2;
   --color-neutral: #2c3f28; /* xanh đậm — footer / nền tối */
   --color-neutral-content: #e7e0cf;
 

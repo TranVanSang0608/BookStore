@@ -19,6 +19,7 @@ export default function ForgotPasswordPage() {
     const result = z.email('Email không hợp lệ').safeParse(email.trim())
     if (!result.success) {
       setEmailError('Email không hợp lệ')
+      document.getElementById('email')?.focus()
       return
     }
     setEmailError('')
@@ -47,6 +48,7 @@ export default function ForgotPasswordPage() {
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 className="input input-bordered w-full"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

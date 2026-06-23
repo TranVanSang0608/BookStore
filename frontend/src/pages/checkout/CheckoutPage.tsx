@@ -99,7 +99,7 @@ export default function CheckoutPage() {
       <div className="max-w-3xl mx-auto p-4">
         <div className="card bg-base-100 border border-base-300">
           <div className="card-body items-center py-16 space-y-2">
-            <p className="text-base-content/60">Giỏ hàng đang trống — chưa có gì để đặt</p>
+            <p className="text-base-content/70">Giỏ hàng đang trống — chưa có gì để đặt</p>
             <Link to="/books" className="btn btn-primary">
               Khám phá sách ngay
             </Link>
@@ -156,7 +156,7 @@ export default function CheckoutPage() {
                 <div className="text-sm space-y-0.5">
                   <p className="font-semibold">
                     {address.recipient_name}{' '}
-                    <span className="font-normal text-base-content/60">| {address.phone}</span>
+                    <span className="font-normal text-base-content/70">| {address.phone}</span>
                     {address.is_default && (
                       <span className="badge badge-primary badge-sm ml-2">Mặc định</span>
                     )}
@@ -192,7 +192,7 @@ export default function CheckoutPage() {
               {cart.items.map((item) => (
                 <li key={item.book_id} className="flex justify-between gap-2">
                   <span>
-                    {item.book.title} <span className="text-base-content/60">× {item.quantity}</span>
+                    {item.book.title} <span className="text-base-content/70">× {item.quantity}</span>
                   </span>
                   <span className="whitespace-nowrap">
                     {formatPrice(item.book.price * item.quantity)}

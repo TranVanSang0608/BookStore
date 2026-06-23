@@ -115,7 +115,7 @@ export default function AdminCategoriesPage() {
             {categories?.map((c) => (
               <tr key={c.id}>
                 <td className="font-medium">{c.name}</td>
-                <td className="text-base-content/60">{c.slug}</td>
+                <td className="text-base-content/70">{c.slug}</td>
                 <td>{c.description}</td>
                 <td className="whitespace-nowrap">
                   <button className="link link-primary mr-3" onClick={() => startEdit(c)}>

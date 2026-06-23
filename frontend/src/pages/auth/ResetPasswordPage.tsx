@@ -4,7 +4,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { resetPasswordApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
 import AuthLayout from '../../components/AuthLayout'
-import { resetPasswordFormSchema, zodErrorsToMap } from '../../lib/validation'
+import PasswordInput from '../../components/PasswordInput'
+import { focusFirstError, resetPasswordFormSchema, zodErrorsToMap } from '../../lib/validation'
 
 // Trang đặt lại mật khẩu: mở từ link ?token=... → nhập mật khẩu mới.
 export default function ResetPasswordPage() {
@@ -27,7 +28,9 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     const result = resetPasswordFormSchema.safeParse(form)
     if (!result.success) {
-      setFieldErrors(zodErrorsToMap(result.error))
+      const errors = zodErrorsToMap(result.error)
+      setFieldErrors(errors)
+      focusFirstError(['password', 'confirm_password'], errors)
       return
     }
     setFieldErrors({})
@@ -58,17 +61,16 @@ export default function ResetPasswordPage() {
               <label className="label" htmlFor="password">
                 Mật khẩu mới
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
-                className="input input-bordered w-full"
+                autoComplete="new-password"
                 value={form.password}
                 onChange={setField('password')}
               />
               {fieldErrors.password ? (
                 <p className="text-error text-sm mt-1">{fieldErrors.password}</p>
               ) : (
-                <p className="text-base-content/60 text-sm mt-1">Ít nhất 8 ký tự</p>
+                <p className="text-base-content/70 text-sm mt-1">Ít nhất 8 ký tự</p>
               )}
             </div>
 
@@ -76,10 +78,9 @@ export default function ResetPasswordPage() {
               <label className="label" htmlFor="confirm_password">
                 Nhập lại mật khẩu mới
               </label>
-              <input
+              <PasswordInput
                 id="confirm_password"
-                type="password"
-                className="input input-bordered w-full"
+                autoComplete="new-password"
                 value={form.confirm_password}
                 onChange={setField('confirm_password')}
               />

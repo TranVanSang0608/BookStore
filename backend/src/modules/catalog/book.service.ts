@@ -49,6 +49,12 @@ export async function listBooks(query: ListBooksQuery) {
     where.price = { gte: query.price_min, lte: query.price_max };
   }
 
+  // Lọc còn-hàng NGAY trong câu truy vấn (không lọc sau khi đã lấy đủ limit) — nếu lọc sau,
+  // gặp trường hợp `limit` cuốn đầu đều hết hàng sẽ trả rỗng dù vẫn còn sách còn hàng ở trang sau.
+  if (query.in_stock) {
+    where.stock_quantity = { gt: 0 };
+  }
+
   const orderBy: Prisma.BookOrderByWithRelationInput =
     query.sort === 'price_asc'
       ? { price: 'asc' }

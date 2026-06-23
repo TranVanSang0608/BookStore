@@ -93,7 +93,7 @@ export default function GoogleLoginButton({ from = '/' }: { from?: string }) {
 
   // Thiếu Client ID → không render nút (derived ở render, không setState trong effect)
   if (!CLIENT_ID) {
-    return <p className="text-base-content/50 text-sm text-center">Chưa cấu hình đăng nhập Google</p>
+    return <p className="text-base-content/70 text-sm text-center">Chưa cấu hình đăng nhập Google</p>
   }
 
   return (

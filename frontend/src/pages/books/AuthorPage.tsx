@@ -54,7 +54,7 @@ export default function AuthorPage() {
       <div className="space-y-3">
         <h2 className="font-serif text-2xl font-semibold text-base-content">Sách của {author.name}</h2>
         {author.books.length === 0 ? (
-          <p className="text-base-content/60">Chưa có sách nào đang bán</p>
+          <p className="text-base-content/70">Chưa có sách nào đang bán</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {author.books.map((book) => (

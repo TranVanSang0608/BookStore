@@ -1,12 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { registerApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
 import AuthLayout from '../../components/AuthLayout'
 import GoogleLoginButton from '../../components/GoogleLoginButton'
+import PasswordInput from '../../components/PasswordInput'
 import { useAuth } from '../../hooks/useAuth'
-import { registerFormSchema, zodErrorsToMap } from '../../lib/validation'
+import { focusFirstError, registerFormSchema, zodErrorsToMap } from '../../lib/validation'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -18,7 +19,7 @@ export default function RegisterPage() {
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const { login } = useAuth()
+  const { login, isLoggedIn } = useAuth()
   const navigate = useNavigate()
 
   const mutation = useMutation({
@@ -31,6 +32,9 @@ export default function RegisterPage() {
     },
   })
 
+  // Đã đăng nhập rồi thì không cần đăng ký nữa → về trang chủ
+  if (isLoggedIn) return <Navigate to="/" replace />
+
   // 1 hàm set chung cho mọi input — tránh viết 5 hàm onChange gần giống nhau
   function setField(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -41,7 +45,9 @@ export default function RegisterPage() {
     e.preventDefault()
     const result = registerFormSchema.safeParse(form)
     if (!result.success) {
-      setFieldErrors(zodErrorsToMap(result.error))
+      const errors = zodErrorsToMap(result.error)
+      setFieldErrors(errors)
+      focusFirstError(['name', 'email', 'phone', 'password', 'confirm_password'], errors)
       return
     }
     setFieldErrors({})
@@ -54,13 +60,14 @@ export default function RegisterPage() {
     key: keyof typeof form
     label: string
     type: string
+    autoComplete: string
     hint?: string
   }> = [
-    { key: 'name', label: 'Họ và tên', type: 'text' },
-    { key: 'email', label: 'Email', type: 'email' },
-    { key: 'phone', label: 'Số điện thoại (không bắt buộc)', type: 'tel' },
-    { key: 'password', label: 'Mật khẩu', type: 'password', hint: 'Ít nhất 8 ký tự' },
-    { key: 'confirm_password', label: 'Nhập lại mật khẩu', type: 'password' },
+    { key: 'name', label: 'Họ và tên', type: 'text', autoComplete: 'name' },
+    { key: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
+    { key: 'phone', label: 'Số điện thoại (không bắt buộc)', type: 'tel', autoComplete: 'tel' },
+    { key: 'password', label: 'Mật khẩu', type: 'password', autoComplete: 'new-password', hint: 'Ít nhất 8 ký tự' },
+    { key: 'confirm_password', label: 'Nhập lại mật khẩu', type: 'password', autoComplete: 'new-password' },
   ]
 
   return (
@@ -75,17 +82,27 @@ export default function RegisterPage() {
             <label className="label" htmlFor={f.key}>
               {f.label}
             </label>
-            <input
-              id={f.key}
-              type={f.type}
-              className="input input-bordered w-full"
-              value={form[f.key]}
-              onChange={setField(f.key)}
-            />
+            {f.type === 'password' ? (
+              <PasswordInput
+                id={f.key}
+                autoComplete={f.autoComplete}
+                value={form[f.key]}
+                onChange={setField(f.key)}
+              />
+            ) : (
+              <input
+                id={f.key}
+                type={f.type}
+                autoComplete={f.autoComplete}
+                className="input input-bordered w-full"
+                value={form[f.key]}
+                onChange={setField(f.key)}
+              />
+            )}
             {fieldErrors[f.key] ? (
               <p className="text-error text-sm mt-1">{fieldErrors[f.key]}</p>
             ) : (
-              f.hint && <p className="text-base-content/60 text-sm mt-1">{f.hint}</p>
+              f.hint && <p className="text-base-content/70 text-sm mt-1">{f.hint}</p>
             )}
           </div>
         ))}

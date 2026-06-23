@@ -77,3 +77,15 @@ export function zodErrorsToMap(error: z.ZodError): Record<string, string> {
   }
   return map
 }
+
+// Đưa con trỏ tới ô ĐẦU TIÊN (theo thứ tự hiển thị) đang có lỗi → người dùng nhảy thẳng tới
+// chỗ cần sửa thay vì tự dò. Gọi ngay sau setFieldErrors (input đã render nên getElementById thấy).
+// toId: dịch tên field (key của errors) sang id của input khi 2 cái không trùng (vd profile_name).
+export function focusFirstError(
+  fieldOrder: string[],
+  errors: Record<string, string>,
+  toId: (field: string) => string = (f) => f,
+): void {
+  const first = fieldOrder.find((f) => errors[f])
+  if (first) document.getElementById(toId(first))?.focus()
+}

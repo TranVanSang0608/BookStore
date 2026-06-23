@@ -1,19 +1,20 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { loginApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
 import AuthLayout from '../../components/AuthLayout'
 import GoogleLoginButton from '../../components/GoogleLoginButton'
+import PasswordInput from '../../components/PasswordInput'
 import { useAuth } from '../../hooks/useAuth'
-import { loginFormSchema, zodErrorsToMap } from '../../lib/validation'
+import { focusFirstError, loginFormSchema, zodErrorsToMap } from '../../lib/validation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const { login } = useAuth()
+  const { login, isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   // RequireAuth đá về đây kèm state.from — login xong quay lại đúng trang đó
@@ -31,11 +32,16 @@ export default function LoginPage() {
     },
   })
 
+  // Đã đăng nhập rồi mà mở /login → đưa thẳng về trang trước đó (hoặc trang chủ), không hiện form
+  if (isLoggedIn) return <Navigate to={from} replace />
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const result = loginFormSchema.safeParse({ email, password })
     if (!result.success) {
-      setFieldErrors(zodErrorsToMap(result.error))
+      const errors = zodErrorsToMap(result.error)
+      setFieldErrors(errors)
+      focusFirstError(['email', 'password'], errors) // nhảy con trỏ tới ô lỗi đầu tiên
       return
     }
     setFieldErrors({})
@@ -56,6 +62,7 @@ export default function LoginPage() {
           <input
             id="email"
             type="email"
+            autoComplete="email"
             className="input input-bordered w-full"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -67,10 +74,9 @@ export default function LoginPage() {
           <label className="label" htmlFor="password">
             Mật khẩu
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
-            className="input input-bordered w-full"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />

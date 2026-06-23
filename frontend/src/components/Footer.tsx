@@ -14,29 +14,7 @@ export default function Footer() {
             Sáng trí tuệ • Mở tương lai. Hiệu sách trực tuyến với hàng nghìn đầu sách văn học, kinh
             tế, kỹ năng và thiếu nhi.
           </p>
-          <div className="flex gap-2 mt-4">
-            <a
-              href="#"
-              aria-label="Facebook"
-              className="w-9 h-9 rounded-lg bg-neutral-content/10 hover:bg-neutral-content/20 flex items-center justify-center text-sm font-semibold text-accent"
-            >
-              f
-            </a>
-            <a
-              href="#"
-              aria-label="YouTube"
-              className="w-9 h-9 rounded-lg bg-neutral-content/10 hover:bg-neutral-content/20 flex items-center justify-center text-sm font-semibold text-accent"
-            >
-              ▶
-            </a>
-            <a
-              href="#"
-              aria-label="Instagram"
-              className="w-9 h-9 rounded-lg bg-neutral-content/10 hover:bg-neutral-content/20 flex items-center justify-center text-sm font-semibold text-accent"
-            >
-              ig
-            </a>
-          </div>
+          {/* Bỏ icon mạng xã hội placeholder (#) — shop demo chưa có tài khoản thật, tránh link chết */}
         </div>
 
         {/* Cột Khám phá — chỉ link tới trang thật */}
@@ -104,12 +82,12 @@ export default function Footer() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between gap-2 text-xs text-neutral-content/60">
           <span>© 2026 Ánh Sách. Bảo lưu mọi quyền.</span>
           <span className="flex gap-4">
-            <a href="#" className="hover:text-neutral-content">
+            <Link to="/dieu-khoan" className="hover:text-neutral-content">
               Điều khoản
-            </a>
-            <a href="#" className="hover:text-neutral-content">
+            </Link>
+            <Link to="/bao-mat" className="hover:text-neutral-content">
               Bảo mật
-            </a>
+            </Link>
           </span>
         </div>
       </div>

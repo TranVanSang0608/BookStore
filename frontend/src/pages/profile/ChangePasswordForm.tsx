@@ -2,7 +2,8 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getApiErrorMessage } from '../../api/client'
 import { changePasswordApi } from '../../api/user'
-import { changePasswordFormSchema, zodErrorsToMap } from '../../lib/validation'
+import PasswordInput from '../../components/PasswordInput'
+import { changePasswordFormSchema, focusFirstError, zodErrorsToMap } from '../../lib/validation'
 
 const EMPTY = { current_password: '', new_password: '', confirm_new_password: '' }
 
@@ -24,7 +25,9 @@ export default function ChangePasswordForm() {
     e.preventDefault()
     const result = changePasswordFormSchema.safeParse(form)
     if (!result.success) {
-      setFieldErrors(zodErrorsToMap(result.error))
+      const errors = zodErrorsToMap(result.error)
+      setFieldErrors(errors)
+      focusFirstError(['current_password', 'new_password', 'confirm_new_password'], errors)
       return
     }
     setFieldErrors({})
@@ -35,10 +38,10 @@ export default function ChangePasswordForm() {
     })
   }
 
-  const fields: Array<{ key: keyof typeof form; label: string }> = [
-    { key: 'current_password', label: 'Mật khẩu hiện tại' },
-    { key: 'new_password', label: 'Mật khẩu mới' },
-    { key: 'confirm_new_password', label: 'Nhập lại mật khẩu mới' },
+  const fields: Array<{ key: keyof typeof form; label: string; autoComplete: string; hint?: string }> = [
+    { key: 'current_password', label: 'Mật khẩu hiện tại', autoComplete: 'current-password' },
+    { key: 'new_password', label: 'Mật khẩu mới', autoComplete: 'new-password', hint: 'Ít nhất 8 ký tự, khác mật khẩu hiện tại' },
+    { key: 'confirm_new_password', label: 'Nhập lại mật khẩu mới', autoComplete: 'new-password' },
   ]
 
   return (
@@ -59,15 +62,16 @@ export default function ChangePasswordForm() {
               <label className="label" htmlFor={f.key}>
                 {f.label}
               </label>
-              <input
+              <PasswordInput
                 id={f.key}
-                type="password"
-                className="input input-bordered w-full"
+                autoComplete={f.autoComplete}
                 value={form[f.key]}
                 onChange={setField(f.key)}
               />
-              {fieldErrors[f.key] && (
+              {fieldErrors[f.key] ? (
                 <p className="text-error text-sm mt-1">{fieldErrors[f.key]}</p>
+              ) : (
+                f.hint && <p className="text-base-content/70 text-sm mt-1">{f.hint}</p>
               )}
             </div>
           ))}

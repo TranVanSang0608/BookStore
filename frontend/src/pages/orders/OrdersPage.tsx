@@ -62,7 +62,7 @@ export default function OrdersPage() {
                         {firstTitle}
                         {more > 0 && ` và ${more} sản phẩm khác`}
                       </p>
-                      <p className="text-xs text-base-content/50">{formatDateTime(order.placed_at)}</p>
+                      <p className="text-xs text-base-content/70">{formatDateTime(order.placed_at)}</p>
                     </div>
                     <div className="text-right space-y-1">
                       <span className={`badge ${meta.badge}`}>{meta.label}</span>

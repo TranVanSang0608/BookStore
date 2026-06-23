@@ -47,8 +47,10 @@ export default function AdminLayout() {
       </header>
 
       {/* Thân: sidebar + nội dung */}
-      <div className="max-w-6xl mx-auto w-full p-4 flex gap-4 items-start flex-1">
-        <ul className="menu bg-base-100 rounded-box shadow w-48 shrink-0">
+      {/* Mobile: sidebar xếp DỌC full-width phía trên nội dung (không bóp hẹp nội dung);
+          từ lg trở lên mới thành cột bên trái cố định */}
+      <div className="max-w-6xl mx-auto w-full p-4 flex flex-col lg:flex-row gap-4 lg:items-start flex-1">
+        <ul className="menu bg-base-100 rounded-box shadow w-full lg:w-48 lg:shrink-0">
           <li className="menu-title">Quản trị</li>
           <li>
             {/* `end` để chỉ active khi đúng /admin (không active khi ở /admin/orders...) */}

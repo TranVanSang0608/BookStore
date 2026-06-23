@@ -65,7 +65,7 @@ export default function AdminOrdersPage() {
         {isPending && <span className="loading loading-spinner" />}
 
         {data && data.items.length === 0 && (
-          <p className="text-base-content/60 py-8 text-center">Không có đơn hàng nào</p>
+          <p className="text-base-content/70 py-8 text-center">Không có đơn hàng nào</p>
         )}
 
         {data && data.items.length > 0 && (
@@ -89,7 +89,7 @@ export default function AdminOrdersPage() {
                       <td className="font-medium">{order.order_code}</td>
                       <td>
                         <p>{order.user.name}</p>
-                        <p className="text-xs text-base-content/50">{order.user.email}</p>
+                        <p className="text-xs text-base-content/70">{order.user.email}</p>
                       </td>
                       <td className="whitespace-nowrap">{formatPrice(order.total)}</td>
                       <td>

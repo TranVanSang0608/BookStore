@@ -26,6 +26,8 @@ import CheckoutPage from '../pages/checkout/CheckoutPage'
 import OrderDetailPage from '../pages/orders/OrderDetailPage'
 import OrdersPage from '../pages/orders/OrdersPage'
 import HomePage from '../pages/home/HomePage'
+import TermsPage from '../pages/legal/TermsPage'
+import PrivacyPage from '../pages/legal/PrivacyPage'
 import ProfilePage from '../pages/profile/ProfilePage'
 import WishlistPage from '../pages/wishlist/WishlistPage'
 
@@ -47,6 +49,9 @@ export default function AppRoutes() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Trang nội dung tĩnh (Đợt 5) — link từ footer */}
+        <Route path="/dieu-khoan" element={<TermsPage />} />
+        <Route path="/bao-mat" element={<PrivacyPage />} />
         <Route
           path="/profile"
           element={

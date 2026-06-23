@@ -20,10 +20,18 @@ import reviewRoutes from './modules/review/routes';
 import userRoutes from './modules/user/routes';
 import voucherRoutes from './modules/voucher/routes';
 import wishlistRoutes from './modules/wishlist/routes';
+import chatRoutes from './modules/chat/routes';
 
 // Cấu hình Express app — tách riêng khỏi server.ts để sau này
 // Jest/Supertest có thể import app test trực tiếp mà không cần mở port.
 const app = express();
+
+// Khi deploy sau proxy (Render/Railway/Nginx), req.ip là IP proxy + có header X-Forwarded-For.
+// express-rate-limit cần 'trust proxy' để lấy ĐÚNG IP client (nếu không sẽ gộp mọi user thành 1 IP,
+// hoặc ném ERR_ERL_UNEXPECTED_X_FORWARDED_FOR). Chỉ bật ở production để dev local không vướng.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 app.use(helmet()); // bộ security headers (CSP, X-Frame-Options...)
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173' })); // chỉ cho phép FE gọi API
@@ -63,6 +71,26 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewRoutes);
 // Dashboard (Phase 9): số liệu tổng quan cho admin (KPI + chart)
 app.use('/api/admin/dashboard', dashboardRoutes);
+
+// Chatbot (Phase 11): proxy DeepSeek. 2 lớp rate-limit chống đốt tiền API key (mỗi tin gọi API tới 2 lần):
+//  - chatLimiter: 10 tin/phút/IP — chặn 1 người spam.
+//  - chatGlobalLimiter: trần TỔNG toàn hệ thống/ngày — chặn kẻ xoay nhiều IP đốt hết credit.
+const chatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Bạn nhắn hơi nhanh, vui lòng thử lại sau 1 phút' },
+});
+const chatGlobalLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: 500,
+  legacyHeaders: false,
+  keyGenerator: () => 'chat-global', // 1 khóa chung cho MỌI request → đếm gộp toàn hệ thống
+  validate: false, // cố tình không dùng IP làm khóa → tắt cảnh báo keyGenerator của express-rate-limit
+  message: { success: false, message: 'Trợ lý đã đạt giới hạn lượt hỏi trong ngày, bạn quay lại sau nhé' },
+});
+app.use('/api/chat', chatGlobalLimiter, chatLimiter, chatRoutes);
 
 // Error handler PHẢI đăng ký sau cùng để hứng lỗi từ mọi route phía trên
 app.use(errorHandler);

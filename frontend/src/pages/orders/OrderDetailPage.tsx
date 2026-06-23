@@ -76,7 +76,7 @@ export default function OrderDetailPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="font-serif text-3xl font-semibold text-base-content">Đơn {order.order_code}</h1>
-          <p className="text-sm text-base-content/60">Đặt lúc {formatDateTime(order.placed_at)}</p>
+          <p className="text-sm text-base-content/70">Đặt lúc {formatDateTime(order.placed_at)}</p>
         </div>
         <span className={`badge ${meta.badge} badge-lg`}>{meta.label}</span>
       </div>
@@ -108,12 +108,12 @@ export default function OrderDetailPage() {
             <h2 className="card-title font-serif text-base">Giao tới</h2>
             <p className="font-semibold">
               {order.shipping_recipient_name}{' '}
-              <span className="font-normal text-base-content/60">| {order.shipping_phone}</span>
+              <span className="font-normal text-base-content/70">| {order.shipping_phone}</span>
             </p>
             <p className="text-sm text-base-content/80">
               {order.shipping_street}, {order.shipping_ward_name}, {order.shipping_province_name}
             </p>
-            {order.note && <p className="text-sm text-base-content/60">Ghi chú: {order.note}</p>}
+            {order.note && <p className="text-sm text-base-content/70">Ghi chú: {order.note}</p>}
           </div>
         </div>
 
@@ -193,7 +193,7 @@ export default function OrderDetailPage() {
                     ) : (
                       <p className="font-medium">{item.book_title}</p>
                     )}
-                    <p className="text-sm text-base-content/60">{item.book_author_name}</p>
+                    <p className="text-sm text-base-content/70">{item.book_author_name}</p>
                   </td>
                   <td className="whitespace-nowrap">{formatPrice(item.price_at_order)}</td>
                   <td>{item.quantity}</td>

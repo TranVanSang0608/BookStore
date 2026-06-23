@@ -77,7 +77,7 @@ export default function BookCard({ book }: { book: BookCardData }) {
             {book.title}
           </h3>
         </Link>
-        <p className="text-sm text-base-content/60 mt-0.5">{book.author.name}</p>
+        <p className="text-sm text-base-content/70 mt-0.5">{book.author.name}</p>
         {book.review_count > 0 && (
           <div className="mt-1">
             <Stars value={book.avg_rating} count={book.review_count} />

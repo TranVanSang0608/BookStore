@@ -16,7 +16,7 @@ export default function CoverImage({ url, title, className = '' }: Props) {
         aria-label={`Chưa có ảnh bìa: ${title}`}
       >
         <BookOpen className="w-1/4 h-auto min-w-4 max-w-10 text-base-content/35" aria-hidden="true" />
-        <span className="font-serif text-sm leading-tight line-clamp-3 text-base-content/55">
+        <span className="font-serif text-sm leading-tight line-clamp-3 text-base-content/70">
           {title}
         </span>
       </div>

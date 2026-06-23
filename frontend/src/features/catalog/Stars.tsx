@@ -8,7 +8,7 @@ export default function Stars({ value, count }: { value: number; count?: number 
         {'☆'.repeat(5 - filled)}
       </span>
       {count !== undefined && (
-        <span className="text-base-content/50">
+        <span className="text-base-content/70">
           {count > 0 ? `${value.toFixed(1)} (${count})` : 'Chưa có đánh giá'}
         </span>
       )}

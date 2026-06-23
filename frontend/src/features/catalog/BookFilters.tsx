@@ -40,7 +40,7 @@ export default function BookFilters({ categories, value, onChange }: Props) {
   }
 
   function catBtnClass(active: boolean) {
-    return `w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm border transition-colors ${
+    return `w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 min-h-11 lg:min-h-0 text-sm border transition-colors ${
       active
         ? 'bg-primary/10 border-primary/30 text-primary font-semibold'
         : 'border-transparent hover:bg-base-200 text-base-content/80'
@@ -60,11 +60,11 @@ export default function BookFilters({ categories, value, onChange }: Props) {
 
       {/* Tìm trong kết quả */}
       <form onSubmit={applyText} className="mb-5">
-        <div className="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-base-content/70 mb-2">
           Tìm trong kết quả
         </div>
-        <div className="flex items-center gap-2 bg-base-200 border border-base-300 rounded-lg px-3 py-2">
-          <Search size={15} className="text-base-content/50 shrink-0" />
+        <div className="flex items-center gap-2 bg-base-200 border border-base-300 rounded-lg px-3 py-2 min-h-11 lg:min-h-0">
+          <Search size={15} className="text-base-content/70 shrink-0" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -77,7 +77,7 @@ export default function BookFilters({ categories, value, onChange }: Props) {
 
       {/* Thể loại — bấm lọc ngay */}
       <div className="mb-5">
-        <div className="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-base-content/70 mb-2">
           Thể loại
         </div>
         <ul className="flex flex-col gap-1">
@@ -94,7 +94,7 @@ export default function BookFilters({ categories, value, onChange }: Props) {
               >
                 <span>{c.name}</span>
                 {c.book_count !== undefined && (
-                  <span className="text-xs text-base-content/45">{c.book_count}</span>
+                  <span className="text-xs text-base-content/70">{c.book_count}</span>
                 )}
               </button>
             </li>
@@ -104,7 +104,7 @@ export default function BookFilters({ categories, value, onChange }: Props) {
 
       {/* Khoảng giá */}
       <form onSubmit={applyText}>
-        <div className="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-base-content/70 mb-2">
           Khoảng giá (đ)
         </div>
         <div className="flex gap-2 mb-2">
@@ -114,7 +114,7 @@ export default function BookFilters({ categories, value, onChange }: Props) {
             inputMode="numeric"
             placeholder="0"
             aria-label="Giá từ"
-            className="input input-bordered input-sm w-1/2"
+            className="input input-bordered input-sm w-1/2 min-h-11 lg:min-h-0"
           />
           <input
             value={priceMax}
@@ -122,10 +122,10 @@ export default function BookFilters({ categories, value, onChange }: Props) {
             inputMode="numeric"
             placeholder="500.000"
             aria-label="Giá đến"
-            className="input input-bordered input-sm w-1/2"
+            className="input input-bordered input-sm w-1/2 min-h-11 lg:min-h-0"
           />
         </div>
-        <button type="submit" className="btn btn-primary btn-sm w-full">
+        <button type="submit" className="btn btn-primary btn-sm w-full min-h-11 lg:min-h-0">
           Áp dụng
         </button>
       </form>

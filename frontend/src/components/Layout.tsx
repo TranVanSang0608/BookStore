@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import ChatWidget from '../features/chat/ChatWidget'
 import EmailVerifyBanner from './EmailVerifyBanner'
 import Footer from './Footer'
 import Navbar from './Navbar'
@@ -21,6 +22,8 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
+      {/* Trợ lý tư vấn sách — nổi góc phải ở trang khách, tự ẩn ở khu /admin */}
+      <ChatWidget />
     </div>
   )
 }

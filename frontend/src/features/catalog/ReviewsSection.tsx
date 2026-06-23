@@ -105,7 +105,7 @@ function ReviewForm({ bookId, initial }: { bookId: number; initial: MyReview | n
 export default function ReviewsSection({ bookId }: { bookId: number }) {
   const { isLoggedIn } = useAuth()
   const [page, setPage] = useState(1)
-  const { data: reviews, isPending } = useQuery({
+  const { data: reviews, isPending, isError, isFetching, refetch } = useQuery({
     queryKey: ['reviews', bookId, page],
     queryFn: () => fetchReviews(bookId, page),
   })
@@ -119,21 +119,30 @@ export default function ReviewsSection({ bookId }: { bookId: number }) {
     <div className="space-y-4">
       {/* Tiêu đề "Đánh giá (N)" đã nằm ở nhãn tab bên trang chi tiết → không lặp lại ở đây */}
       {!isLoggedIn && (
-        <p className="text-sm text-base-content/60">Đăng nhập để đánh giá sách bạn đã mua.</p>
+        <p className="text-sm text-base-content/70">Đăng nhập để đánh giá sách bạn đã mua.</p>
       )}
       {isLoggedIn &&
         status &&
         (status.can_review ? (
           <ReviewForm key={status.my_review?.id ?? 'new'} bookId={bookId} initial={status.my_review} />
         ) : (
-          <p className="text-sm text-base-content/60">
+          <p className="text-sm text-base-content/70">
             Chỉ khách đã mua &amp; nhận sách này mới được đánh giá.
           </p>
         ))}
 
       {isPending && <span className="loading loading-spinner" />}
+      {/* Lỗi tải danh sách đánh giá: dòng gọn + link thử lại (không dùng block lỗi to vì nằm trong tab) */}
+      {isError && (
+        <p className="text-sm text-base-content/70">
+          Không tải được đánh giá.{' '}
+          <button onClick={() => refetch()} disabled={isFetching} className="link link-primary">
+            Thử lại
+          </button>
+        </p>
+      )}
       {reviews && reviews.items.length === 0 && (
-        <p className="text-base-content/60">Chưa có đánh giá nào.</p>
+        <p className="text-base-content/70">Chưa có đánh giá nào.</p>
       )}
       <ul className="space-y-4">
         {reviews?.items.map((r) => (
@@ -144,7 +153,7 @@ export default function ReviewsSection({ bookId }: { bookId: number }) {
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm">{r.user_name}</span>
-                <span className="text-xs text-base-content/50">
+                <span className="text-xs text-base-content/70">
                   {new Date(r.updated_at).toLocaleDateString('vi-VN')}
                 </span>
               </div>

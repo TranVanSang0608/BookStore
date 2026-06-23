@@ -144,7 +144,7 @@ export default function BookDetailPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="text-sm text-base-content/50 mb-4 flex gap-2 items-center flex-wrap">
+      <nav aria-label="Breadcrumb" className="text-sm text-base-content/70 mb-4 flex gap-2 items-center flex-wrap">
         <Link to="/" className="hover:text-primary">
           Trang chủ
         </Link>
@@ -172,7 +172,7 @@ export default function BookDetailPage() {
             <h1 className="font-serif text-3xl font-semibold text-base-content leading-tight">
               {book.title}
             </h1>
-            <p className="text-base-content/60 mt-1">
+            <p className="text-base-content/70 mt-1">
               Tác giả:{' '}
               <Link to={`/author/${book.author.id}`} className="text-primary hover:underline">
                 {book.author.name}
@@ -222,7 +222,7 @@ export default function BookDetailPage() {
               className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 tab === t.key
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-base-content/60 hover:text-base-content'
+                  : 'border-transparent text-base-content/70 hover:text-base-content'
               }`}
             >
               {t.label}
@@ -238,7 +238,7 @@ export default function BookDetailPage() {
                 {book.description}
               </p>
             ) : (
-              <p className="text-base-content/50">Chưa có mô tả cho sách này.</p>
+              <p className="text-base-content/70">Chưa có mô tả cho sách này.</p>
             ))}
 
           {tab === 'info' &&
@@ -247,14 +247,14 @@ export default function BookDetailPage() {
                 <tbody>
                   {thongTinXuatBan.map((row) => (
                     <tr key={row.label}>
-                      <td className="text-base-content/60 w-40">{row.label}</td>
+                      <td className="text-base-content/70 w-40">{row.label}</td>
                       <td>{row.value}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p className="text-base-content/50">Chưa cập nhật thông tin xuất bản.</p>
+              <p className="text-base-content/70">Chưa cập nhật thông tin xuất bản.</p>
             ))}
 
           {tab === 'reviews' && <ReviewsSection bookId={book.id} />}

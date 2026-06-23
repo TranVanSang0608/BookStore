@@ -9,6 +9,9 @@ export const listBooksQuerySchema = z.object({
   category: z.string().max(100).optional().catch(undefined), // slug của category
   price_min: z.coerce.number().int().nonnegative().optional().catch(undefined),
   price_max: z.coerce.number().int().nonnegative().optional().catch(undefined),
+  // Lọc CÒN HÀNG ở tầng DB (không lọc sau khi đã limit). Dùng enum-transform thay vì
+  // z.coerce.boolean (coerce coi "false" là true) để ?in_stock=false hiểu đúng là false.
+  in_stock: z.enum(['true', 'false']).transform((v) => v === 'true').optional().catch(undefined),
   sort: z.enum(['newest', 'price_asc', 'price_desc']).catch('newest'),
   page: z.coerce.number().int().min(1).catch(1),
   limit: z.coerce.number().int().min(1).max(50).catch(12),
