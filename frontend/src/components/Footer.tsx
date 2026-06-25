@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
+import { useSiteSettings } from '../hooks/useSiteSettings'
 import Logo from './Logo'
 
 // Footer chung (Giai đoạn B3): 4 cột + tagline + dòng bản quyền.
 // Dùng nền xanh đậm (neutral) nên Logo truyền tone="light" để nét/chữ sáng, không bị chìm.
 export default function Footer() {
+  const settings = useSiteSettings() // thông tin shop admin sửa được (DB)
   return (
     <footer className="bg-neutral text-neutral-content/80">
       <div className="max-w-6xl mx-auto px-4 py-12 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
@@ -65,11 +67,11 @@ export default function Footer() {
         <div>
           <h3 className="font-semibold text-neutral-content mb-3">Liên hệ</h3>
           <p className="text-sm leading-relaxed">
-            Hotline: 1900 1234
+            Hotline: {settings.shop_hotline}
             <br />
-            hello@anhsach.vn
+            {settings.shop_email}
             <br />
-            123 Lê Lợi, Q.1, TP.HCM
+            {settings.shop_address}
           </p>
           <div className="flex gap-2 mt-3">
             <span className="badge badge-outline border-neutral-content/30">COD</span>

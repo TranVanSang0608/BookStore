@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { fetchAdminBooks, setBookActiveApi } from '../../api/books'
 import CoverImage from '../../features/catalog/CoverImage'
 import Pagination from '../../features/catalog/Pagination'
@@ -8,6 +8,7 @@ import { formatPrice } from '../../lib/format'
 
 export default function AdminBooksPage() {
   // Bảng admin dùng state cục bộ (không cần URL share được như trang public)
+  const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [search, setSearch] = useState('') // giá trị đã bấm "Tìm" — q là giá trị đang gõ
   const [page, setPage] = useState(1)
@@ -75,7 +76,13 @@ export default function AdminBooksPage() {
               </thead>
               <tbody>
                 {data.items.map((book) => (
-                  <tr key={book.id}>
+                  // Cả dòng bấm được để mở trang sửa; các nút thao tác bên trong chặn nổi bọt
+                  // (stopPropagation) để bấm "Ẩn/Hiện" không vô tình mở trang sửa.
+                  <tr
+                    key={book.id}
+                    className="hover cursor-pointer"
+                    onClick={() => navigate(`/admin/books/${book.id}/edit`)}
+                  >
                     <td>
                       <CoverImage
                         url={book.cover_image_url}
@@ -89,21 +96,26 @@ export default function AdminBooksPage() {
                     <td>{book.stock_quantity}</td>
                     <td>
                       {book.is_active ? (
-                        <span className="badge badge-success badge-sm">Đang bán</span>
+                        <span className="badge badge-success badge-sm whitespace-nowrap">Đang bán</span>
                       ) : (
-                        <span className="badge badge-ghost badge-sm">Đang ẩn</span>
+                        <span className="badge badge-ghost badge-sm whitespace-nowrap">Đang ẩn</span>
                       )}
                     </td>
                     <td className="whitespace-nowrap">
-                      <Link to={`/admin/books/${book.id}/edit`} className="link link-primary mr-3">
+                      <Link
+                        to={`/admin/books/${book.id}/edit`}
+                        className="link link-primary mr-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         Sửa
                       </Link>
                       <button
                         className="link"
                         disabled={toggleMutation.isPending}
-                        onClick={() =>
+                        onClick={(e) => {
+                          e.stopPropagation()
                           toggleMutation.mutate({ id: book.id, isActive: !book.is_active })
-                        }
+                        }}
                       >
                         {book.is_active ? 'Ẩn' : 'Hiện'}
                       </button>

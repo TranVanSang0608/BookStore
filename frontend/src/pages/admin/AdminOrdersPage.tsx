@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { fetchAdminOrders, type OrderStatus } from '../../api/orders'
 import Pagination from '../../features/catalog/Pagination'
 import { formatDateTime, formatPrice } from '../../lib/format'
@@ -9,6 +9,7 @@ import { ORDER_STATUS_META } from '../../lib/order-status'
 const STATUS_OPTIONS: OrderStatus[] = ['Pending', 'Confirmed', 'Shipping', 'Delivered', 'Cancelled']
 
 export default function AdminOrdersPage() {
+  const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [search, setSearch] = useState('') // mã đơn đã bấm Tìm
   const [status, setStatus] = useState('') // '' = tất cả trạng thái
@@ -84,8 +85,13 @@ export default function AdminOrdersPage() {
               <tbody>
                 {data.items.map((order) => {
                   const meta = ORDER_STATUS_META[order.status]
+                  // Cả dòng bấm được để vào chi tiết (UX bảng quản trị); cột "Xem ›" chỉ là gợi ý trực quan
                   return (
-                    <tr key={order.id}>
+                    <tr
+                      key={order.id}
+                      className="hover cursor-pointer"
+                      onClick={() => navigate(`/admin/orders/${order.id}`)}
+                    >
                       <td className="font-medium">{order.order_code}</td>
                       <td>
                         <p>{order.user.name}</p>
@@ -93,14 +99,10 @@ export default function AdminOrdersPage() {
                       </td>
                       <td className="whitespace-nowrap">{formatPrice(order.total)}</td>
                       <td>
-                        <span className={`badge ${meta.badge} badge-sm`}>{meta.label}</span>
+                        <span className={`badge ${meta.badge} badge-sm whitespace-nowrap`}>{meta.label}</span>
                       </td>
                       <td className="whitespace-nowrap text-sm">{formatDateTime(order.placed_at)}</td>
-                      <td>
-                        <Link to={`/admin/orders/${order.id}`} className="link link-primary">
-                          Xem
-                        </Link>
-                      </td>
+                      <td className="text-primary font-medium whitespace-nowrap">Xem ›</td>
                     </tr>
                   )
                 })}

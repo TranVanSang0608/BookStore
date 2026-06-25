@@ -12,6 +12,8 @@ import AdminBooksPage from '../pages/admin/AdminBooksPage'
 import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage'
 import AdminOrderDetailPage from '../pages/admin/AdminOrderDetailPage'
 import AdminOrdersPage from '../pages/admin/AdminOrdersPage'
+import AdminSettingsPage from '../pages/admin/AdminSettingsPage'
+import AdminShippingPage from '../pages/admin/AdminShippingPage'
 import AdminVouchersPage from '../pages/admin/AdminVouchersPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import LoginPage from '../pages/auth/LoginPage'
@@ -125,6 +127,8 @@ export default function AppRoutes() {
         <Route path="categories" element={<AdminCategoriesPage />} />
         <Route path="authors" element={<AdminAuthorsPage />} />
         <Route path="vouchers" element={<AdminVouchersPage />} />
+        <Route path="shipping" element={<AdminShippingPage />} />
+        <Route path="settings" element={<AdminSettingsPage />} />
       </Route>
     </Routes>
   )

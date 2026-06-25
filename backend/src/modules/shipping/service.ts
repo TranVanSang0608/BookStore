@@ -25,3 +25,38 @@ export async function calcShippingFee(provinceCode: string, subtotal: number) {
     free_threshold: zone.free_threshold,
   };
 }
+
+// ---------- Admin: quản lý phí ship theo tỉnh ----------
+
+// Danh sách phí ship 34 tỉnh kèm TÊN tỉnh để admin dễ tra. ShippingZone không có FK tới
+// Province (chỉ lưu province_code) nên nạp Province riêng rồi ghép tên. Sắp theo tên tỉnh.
+export async function listShippingZones() {
+  const [zones, provinces] = await Promise.all([
+    prisma.shippingZone.findMany(),
+    prisma.province.findMany(),
+  ]);
+  const nameByCode = new Map(provinces.map((p) => [p.code, p.name]));
+
+  return zones
+    .map((z) => ({
+      province_code: z.province_code,
+      province_name: nameByCode.get(z.province_code) ?? z.province_code,
+      fee: z.fee,
+      free_threshold: z.free_threshold,
+    }))
+    .sort((a, b) => a.province_name.localeCompare(b.province_name, 'vi'));
+}
+
+// Sửa phí + ngưỡng free ship của 1 tỉnh. Không tồn tại → 404 (không tạo mới tỉnh lạ).
+export async function updateShippingZone(
+  provinceCode: string,
+  data: { fee: number; free_threshold: number | null },
+) {
+  const zone = await prisma.shippingZone.findUnique({ where: { province_code: provinceCode } });
+  if (!zone) throw new AppError(404, 'Không tìm thấy khu vực giao hàng này');
+
+  return prisma.shippingZone.update({
+    where: { province_code: provinceCode },
+    data: { fee: data.fee, free_threshold: data.free_threshold },
+  });
+}

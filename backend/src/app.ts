@@ -17,6 +17,7 @@ import locationsRoutes from './modules/locations/routes';
 import shippingRoutes from './modules/shipping/routes';
 import uploadRoutes from './modules/upload/routes';
 import reviewRoutes from './modules/review/routes';
+import settingsRoutes from './modules/settings/routes';
 import userRoutes from './modules/user/routes';
 import voucherRoutes from './modules/voucher/routes';
 import wishlistRoutes from './modules/wishlist/routes';
@@ -71,6 +72,8 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewRoutes);
 // Dashboard (Phase 9): số liệu tổng quan cho admin (KPI + chart)
 app.use('/api/admin/dashboard', dashboardRoutes);
+// Settings: thông tin shop (công khai để hiển thị) + admin cập nhật
+app.use('/api/settings', settingsRoutes);
 
 // Chatbot (Phase 11): proxy DeepSeek. 2 lớp rate-limit chống đốt tiền API key (mỗi tin gọi API tới 2 lần):
 //  - chatLimiter: 10 tin/phút/IP — chặn 1 người spam.

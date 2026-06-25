@@ -18,3 +18,14 @@ export async function getFee(req: Request, res: Response) {
   const fee = await shippingService.calcShippingFee(result.data.province_code, result.data.subtotal);
   res.json({ success: true, data: fee });
 }
+
+// ---------- Admin ----------
+
+export async function adminListZones(_req: Request, res: Response) {
+  res.json({ success: true, data: await shippingService.listShippingZones() });
+}
+
+export async function adminUpdateZone(req: Request, res: Response) {
+  const zone = await shippingService.updateShippingZone(String(req.params.provinceCode), req.body);
+  res.json({ success: true, data: zone });
+}

@@ -315,6 +315,17 @@ model ShippingZone {
   free_threshold Int? // đơn từ ngưỡng này trở lên free ship; null = không áp dụng free ship
 }
 
+// ---------- SiteSetting (cấu hình thông tin shop — admin sửa được) ----------
+// Bảng key-value đơn giản: mỗi dòng là 1 thiết lập (hotline, email, địa chỉ shop...).
+// Trước đây các giá trị này viết cứng trong Footer/Navbar; chuyển vào DB để admin
+// chỉnh qua giao diện mà không phải sửa code. Mặc định nằm trong code (settings/service.ts):
+// thiếu dòng nào thì FE/endpoint công khai trả về giá trị mặc định đó.
+model SiteSetting {
+  key        String   @id // vd "shop_hotline", "shop_email", "shop_address"
+  value      String
+  updated_at DateTime @updatedAt
+}
+
 // ---------- Voucher (Phase 7 — NICE) ----------
 
 // Kiểu giảm giá: theo % (có trần max_discount) hoặc số tiền cố định (đồng). Trừ vào subtotal.

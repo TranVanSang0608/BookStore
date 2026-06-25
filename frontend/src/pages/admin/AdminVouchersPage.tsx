@@ -241,7 +241,12 @@ export default function AdminVouchersPage() {
             </thead>
             <tbody>
               {vouchers?.map((v) => (
-                <tr key={v.id}>
+                // Cả dòng bấm được để đổ mã vào form sửa ở trên; các nút thao tác chặn nổi bọt
+                <tr
+                  key={v.id}
+                  className="hover cursor-pointer"
+                  onClick={() => startEdit(v)}
+                >
                   <td className="font-mono font-medium">{v.code}</td>
                   <td>{discountLabel(v)}</td>
                   <td>{v.min_order > 0 ? formatPrice(v.min_order) : '—'}</td>
@@ -252,21 +257,31 @@ export default function AdminVouchersPage() {
                   <td>{v.expire_at ? v.expire_at.slice(0, 10) : '—'}</td>
                   <td>
                     <button
-                      className={`badge ${v.is_active ? 'badge-success' : 'badge-ghost'}`}
+                      className={`badge whitespace-nowrap ${v.is_active ? 'badge-success' : 'badge-ghost'}`}
                       disabled={toggleMutation.isPending}
-                      onClick={() => toggleMutation.mutate(v.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleMutation.mutate(v.id)
+                      }}
                     >
                       {v.is_active ? 'Bật' : 'Tắt'}
                     </button>
                   </td>
                   <td className="whitespace-nowrap">
-                    <button className="link link-primary mr-3" onClick={() => startEdit(v)}>
+                    <button
+                      className="link link-primary mr-3"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startEdit(v)
+                      }}
+                    >
                       Sửa
                     </button>
                     <button
                       className="link link-error"
                       disabled={deleteMutation.isPending}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         if (window.confirm(`Xóa mã "${v.code}"?`)) deleteMutation.mutate(v.id)
                       }}
                     >

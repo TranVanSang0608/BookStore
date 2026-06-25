@@ -5,6 +5,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { fetchCategories } from '../api/categories'
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
+import { useSiteSettings } from '../hooks/useSiteSettings'
 import { useTheme } from '../lib/theme'
 import Logo from './Logo'
 
@@ -12,6 +13,7 @@ export default function Navbar() {
   const { user, isLoggedIn, logout } = useAuth()
   const { count } = useCart()
   const { isDark, toggle } = useTheme()
+  const settings = useSiteSettings() // hotline shop (admin sửa được)
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -43,7 +45,7 @@ export default function Navbar() {
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
           <span>Miễn phí giao hàng cho đơn từ 300.000đ</span>
           <div className="flex items-center gap-4">
-            <span>Hotline: 1900 1234</span>
+            <span>Hotline: {settings.shop_hotline}</span>
             <Link to="/orders" className="hover:text-neutral-content">
               Tra cứu đơn hàng
             </Link>

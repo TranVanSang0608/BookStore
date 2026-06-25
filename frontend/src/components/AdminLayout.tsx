@@ -73,6 +73,12 @@ export default function AdminLayout() {
           <li>
             <NavLink to="/admin/vouchers">Mã giảm giá</NavLink>
           </li>
+          <li>
+            <NavLink to="/admin/shipping">Phí vận chuyển</NavLink>
+          </li>
+          <li>
+            <NavLink to="/admin/settings">Thông tin shop</NavLink>
+          </li>
         </ul>
         <div className="flex-1 min-w-0">
           <Outlet />
