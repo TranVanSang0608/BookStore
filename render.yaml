@@ -1,0 +1,53 @@
+# Render Blueprint — deploy BACKEND (Express + Prisma) lên Render.
+# Cách dùng: Render Dashboard > New > Blueprint > trỏ vào repo này.
+# Render đọc file này, tạo 1 Web Service theo cấu hình bên dưới.
+# Các biến đánh dấu `sync: false` = BÍ MẬT, tự nhập trong Dashboard (không lưu vào git).
+services:
+  - type: web
+    name: bookstore-api
+    runtime: node
+    rootDir: backend # chạy mọi lệnh trong thư mục backend/ (monorepo)
+    region: singapore # gần Việt Nam → độ trễ thấp
+    plan: free
+    # migrate deploy chạy ở cuối build (free tier không có Pre-Deploy Command riêng).
+    # migrate deploy CHỈ áp các migration còn thiếu nên chạy lại an toàn. Seed chạy 1 lần
+    # thủ công qua Shell sau lần deploy đầu (xem DEPLOY.md) — KHÔNG đưa seed vào build.
+    buildCommand: npm install && npm run build && npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: VNP_URL
+        value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      - key: DEEPSEEK_MODEL
+        value: deepseek-v4-flash
+      # ----- Bí mật / phụ thuộc môi trường: tự nhập trong Render Dashboard -----
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN # = URL frontend Vercel (vd https://anhsach.vercel.app)
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: VNP_TMN_CODE
+        sync: false
+      - key: VNP_HASH_SECRET
+        sync: false
+      - key: VNP_RETURN_URL # = https://<backend>.onrender.com/api/payments/vnpay/return
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD # ĐẶT MẬT KHẨU MẠNH (khác Admin@123)
+        sync: false
