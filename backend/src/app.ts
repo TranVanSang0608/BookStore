@@ -29,9 +29,16 @@ const app = express();
 
 // Khi deploy sau proxy (Render/Railway/Nginx), req.ip là IP proxy + có header X-Forwarded-For.
 // express-rate-limit cần 'trust proxy' để lấy ĐÚNG IP client (nếu không sẽ gộp mọi user thành 1 IP,
-// hoặc ném ERR_ERL_UNEXPECTED_X_FORWARDED_FOR). Chỉ bật ở production để dev local không vướng.
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
+// hoặc ném ERR_ERL_UNEXPECTED_X_FORWARDED_FOR).
+//
+// Cấu hình qua env TRUST_PROXY (số hop, vd '1'; hoặc '0'/'false' để TẮT). Mặc định: bật 1 hop ở
+// production (đúng cho Render/Railway), tắt ở dev. CẢNH BÁO: nếu Node bị expose TRỰC TIẾP ra
+// internet (không có reverse proxy), phải đặt TRUST_PROXY=0 — nếu không attacker tự gửi
+// X-Forwarded-For giả để né rate-limit theo IP.
+const trustProxy = process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? '1' : '0');
+if (trustProxy !== '0' && trustProxy !== 'false') {
+  const hops = Number(trustProxy);
+  app.set('trust proxy', Number.isNaN(hops) ? trustProxy : hops); // số → số hop; chuỗi khác → để Express tự hiểu
 }
 
 app.use(helmet()); // bộ security headers (CSP, X-Frame-Options...)
@@ -47,7 +54,20 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Quá nhiều yêu cầu, vui lòng thử lại sau 15 phút' },
 });
 
+// Rate limit CHUNG (nhẹ) cho toàn bộ API public — chống spam làm chậm DB / hết quota server.
+// Hạn mức rộng (1000 req/15p/IP ≈ 66 req/phút) để KHÔNG cản người dùng thật (duyệt + lọc + phân
+// trang), chỉ chặn lưu lượng bất thường. Auth/chat vẫn có limiter riêng CHẶT hơn → 1 request có
+// thể dính cả 2 tầng (phòng thủ nhiều lớp). Health check (/api/health) đăng ký TRƯỚC nên không bị tính.
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Quá nhiều yêu cầu, vui lòng thử lại sau ít phút' },
+});
+
 app.use('/api/health', healthRoutes);
+app.use('/api', globalLimiter); // áp cho mọi route /api phía dưới (health ở trên đã thoát)
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/locations', locationsRoutes);

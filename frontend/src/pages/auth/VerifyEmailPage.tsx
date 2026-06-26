@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { verifyEmailApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
@@ -13,8 +13,9 @@ const attemptedTokens = new Set<string>()
 
 // Trang mở từ link trong email: ?token=... → gọi API xác thực đúng 1 lần.
 export default function VerifyEmailPage() {
-  const [params] = useSearchParams()
-  const token = params.get('token') ?? ''
+  const [params, setParams] = useSearchParams()
+  // Bắt token MỘT LẦN vào state rồi XÓA khỏi thanh địa chỉ để không lưu lại trong lịch sử/ảnh chụp.
+  const [token] = useState(() => params.get('token') ?? '')
   const { user, updateUser } = useAuth()
 
   const mutation = useMutation({
@@ -24,6 +25,11 @@ export default function VerifyEmailPage() {
       if (user) updateUser({ ...user, email_verified: true })
     },
   })
+
+  useEffect(() => {
+    if (params.has('token')) setParams(new URLSearchParams(), { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     // Bỏ qua nếu: thiếu token · token này đã thử rồi · user đang đăng nhập & đã xác minh sẵn

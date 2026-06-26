@@ -14,9 +14,11 @@ export async function updateProfileApi(input: {
   return data.data
 }
 
+// Trả về token MỚI: đổi mật khẩu làm token cũ hết hiệu lực ở backend, FE phải thay bằng token này
 export async function changePasswordApi(input: {
   current_password: string
   new_password: string
-}): Promise<void> {
-  await apiClient.put('/users/me/password', input)
+}): Promise<string> {
+  const { data } = await apiClient.put<ApiResponse<{ token: string }>>('/users/me/password', input)
+  return data.data.token
 }

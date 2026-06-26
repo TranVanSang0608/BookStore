@@ -15,6 +15,7 @@ export async function updateMe(req: Request, res: Response) {
 }
 
 export async function changePassword(req: Request, res: Response) {
-  await userService.changePassword(req.user!.id, req.body);
-  res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+  // Trả token MỚI để FE thay token cũ (đổi mật khẩu vô hiệu token cũ) — giữ phiên đang đăng nhập
+  const token = await userService.changePassword(req.user!.id, req.body);
+  res.json({ success: true, message: 'Đổi mật khẩu thành công', data: { token } });
 }

@@ -15,6 +15,11 @@ jest.mock('../lib/prisma', () => ({
 const mockFindUnique = prisma.user.findUnique as jest.Mock;
 const mockUpdate = prisma.user.update as jest.Mock;
 
+beforeAll(() => {
+  // changePassword cấp token mới → signToken cần JWT_SECRET (giá trị test, không đụng .env thật)
+  process.env.JWT_SECRET = 'test-secret-cho-jest';
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -39,17 +44,22 @@ describe('changePassword', () => {
     expect(mockUpdate).not.toHaveBeenCalled(); // sai thì tuyệt đối không update
   });
 
-  it('lưu hash MỚI (không phải plaintext) khi mật khẩu hiện tại đúng', async () => {
+  it('lưu hash MỚI + tăng token_version + trả token mới khi mật khẩu hiện tại đúng', async () => {
     const oldHash = await hashCu();
     mockFindUnique.mockResolvedValue({ id: 1, password_hash: oldHash });
-    mockUpdate.mockResolvedValue({});
+    mockUpdate.mockResolvedValue({ id: 1, role: 'user', token_version: 1 });
 
-    await changePassword(1, { current_password: 'mat-khau-cu', new_password: 'mat-khau-moi-8ky-tu' });
+    const token = await changePassword(1, {
+      current_password: 'mat-khau-cu',
+      new_password: 'mat-khau-moi-8ky-tu',
+    });
 
-    const savedHash = mockUpdate.mock.calls[0][0].data.password_hash;
-    expect(savedHash).not.toBe('mat-khau-moi-8ky-tu'); // không lưu plaintext
-    expect(savedHash).not.toBe(oldHash); // hash mới khác hash cũ
-    expect(await bcrypt.compare('mat-khau-moi-8ky-tu', savedHash)).toBe(true); // verify được
+    const updateArg = mockUpdate.mock.calls[0][0].data;
+    expect(updateArg.password_hash).not.toBe('mat-khau-moi-8ky-tu'); // không lưu plaintext
+    expect(updateArg.password_hash).not.toBe(oldHash); // hash mới khác hash cũ
+    expect(await bcrypt.compare('mat-khau-moi-8ky-tu', updateArg.password_hash)).toBe(true); // verify được
+    expect(updateArg.token_version).toEqual({ increment: 1 }); // vô hiệu token cũ
+    expect(typeof token).toBe('string'); // trả token mới cho phiên hiện tại
   });
 
   it('ném AppError 400 với tài khoản không có password (OAuth sau này)', async () => {

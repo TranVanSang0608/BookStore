@@ -2,13 +2,16 @@
 import { consumeEmailToken, createEmailToken, hashToken } from '../lib/email-token';
 import { prisma } from '../lib/prisma';
 
-jest.mock('../lib/prisma', () => ({
-  prisma: {
+jest.mock('../lib/prisma', () => {
+  // createEmailToken gói khóa-hàng-User ($queryRaw FOR UPDATE) + updateMany (vô hiệu token cũ)
+  // + create trong 1 transaction CALLBACK → mock $transaction tự gọi callback với chính prisma mock.
+  const prismaMock: Record<string, unknown> = {
     emailToken: { create: jest.fn(), updateMany: jest.fn(), findUnique: jest.fn() },
-    // createEmailToken gói updateMany (vô hiệu token cũ) + create trong 1 transaction
-    $transaction: jest.fn(),
-  },
-}));
+    $queryRaw: jest.fn(),
+  };
+  prismaMock.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaMock));
+  return { prisma: prismaMock };
+});
 
 beforeEach(() => jest.clearAllMocks());
 

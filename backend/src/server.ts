@@ -1,7 +1,11 @@
 import 'dotenv/config'; // nạp .env TRƯỚC các import khác (app.ts có đọc process.env)
 import app from './app';
 import { startAutoCancelJob } from './jobs/auto-cancel-orders';
+import { assertJwtSecret } from './lib/jwt';
 import { logger } from './lib/logger';
+
+// Fail SỚM nếu JWT_SECRET thiếu/mẫu/yếu — không cho server lên với secret không an toàn.
+assertJwtSecret();
 
 const PORT = Number(process.env.PORT ?? 3000);
 

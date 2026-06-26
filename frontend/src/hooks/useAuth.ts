@@ -15,6 +15,8 @@ export interface AuthContextValue {
   login: (auth: StoredAuth) => Promise<void>
   logout: () => void
   updateUser: (user: PublicUser) => void
+  // Thay token đang lưu (vd sau đổi mật khẩu backend cấp token mới) — giữ nguyên user
+  updateToken: (token: string) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

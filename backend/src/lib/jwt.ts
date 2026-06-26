@@ -1,19 +1,43 @@
 import jwt from 'jsonwebtoken';
 import type { Role } from '../generated/prisma/client';
 
-// Payload trong token: TỐI THIỂU — chỉ id (claim chuẩn "sub") + role.
-// Không nhét email/name vào token: thông tin đổi được thì lấy từ DB, token thì không sửa được.
+// Payload trong token: TỐI THIỂU — id (claim chuẩn "sub"), role, và tv (token_version).
+// Không nhét email/name: thông tin đổi được thì lấy từ DB, token thì không sửa được.
+// `tv` để middleware auth đối chiếu với User.token_version trong DB — đổi mật khẩu thì
+// token cũ (tv lệch) bị từ chối ngay. role trong token chỉ để tham khảo; auth ĐỌC role TỪ DB.
 export interface JwtPayload {
   sub: number;
   role: Role;
+  tv: number;
 }
 
-// Đọc secret mỗi lần dùng (không cache lúc import) để chắc chắn dotenv đã nạp xong;
-// thiếu secret thì fail ngay với thông báo rõ ràng thay vì ký token bằng undefined.
+// Các giá trị MẪU/yếu phổ biến — TUYỆT ĐỐI không được dùng để ký token thật: ai cũng biết
+// chuỗi mẫu nên có thể tự ký JWT giả mạo (vd token admin) mà backend vẫn verify qua chữ ký.
+const PLACEHOLDER_SECRETS = new Set([
+  'thay-bang-chuoi-ngau-nhien-dai',
+  'changeme',
+  'secret',
+  'your-secret-key',
+]);
+
+// Đọc secret mỗi lần dùng (không cache lúc import) để chắc chắn dotenv đã nạp xong.
+// Từ chối secret thiếu / là giá trị mẫu / (ở production) quá ngắn — thay vì ký bằng chuỗi yếu.
 function getSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('Thiếu JWT_SECRET trong .env');
+  if (PLACEHOLDER_SECRETS.has(secret)) {
+    throw new Error('JWT_SECRET đang là giá trị MẪU — tạo chuỗi ngẫu nhiên thật (>= 32 ký tự) trước khi chạy.');
+  }
+  // Ép độ dài tối thiểu ở production; dev/test cho ngắn để tiện (test dùng secret ngắn).
+  if (process.env.NODE_ENV === 'production' && secret.length < 32) {
+    throw new Error('JWT_SECRET ở production phải dài >= 32 ký tự ngẫu nhiên.');
+  }
   return secret;
+}
+
+// Gọi lúc KHỞI ĐỘNG (server.ts) để fail SỚM nếu secret thiếu/mẫu/yếu — thay vì lỗi ở request đầu.
+export function assertJwtSecret(): void {
+  getSecret();
 }
 
 export function signToken(payload: JwtPayload): string {

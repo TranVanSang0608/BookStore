@@ -3,17 +3,23 @@ import { useState } from 'react'
 import { getApiErrorMessage } from '../../api/client'
 import { changePasswordApi } from '../../api/user'
 import PasswordInput from '../../components/PasswordInput'
+import { useAuth } from '../../hooks/useAuth'
 import { changePasswordFormSchema, focusFirstError, zodErrorsToMap } from '../../lib/validation'
 
 const EMPTY = { current_password: '', new_password: '', confirm_new_password: '' }
 
 export default function ChangePasswordForm() {
+  const { updateToken } = useAuth()
   const [form, setForm] = useState(EMPTY)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const mutation = useMutation({
     mutationFn: changePasswordApi,
-    onSuccess: () => setForm(EMPTY), // đổi xong xóa trắng form
+    onSuccess: (token) => {
+      // Backend cấp token mới (token cũ đã bị vô hiệu) → thay ngay để không bị đăng xuất
+      updateToken(token)
+      setForm(EMPTY) // đổi xong xóa trắng form
+    },
   })
 
   function setField(field: keyof typeof form) {

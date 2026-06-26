@@ -17,6 +17,14 @@ export class AppError extends Error {
 // Lưu ý: phải khai báo đủ 4 tham số thì Express mới nhận diện đây là error middleware.
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
+    // Lỗi 5xx (lỗi phía server có chủ đích, vd thiếu cấu hình GOOGLE_CLIENT_ID): log chi tiết
+    // phía server nhưng chỉ trả message CHUNG cho client — không lộ nội bộ ra ngoài.
+    if (err.statusCode >= 500) {
+      logger.error('AppError 5xx', { message: err.message, path: req.path });
+      res.status(err.statusCode).json({ success: false, message: 'Lỗi hệ thống, vui lòng thử lại sau' });
+      return;
+    }
+    // Lỗi 4xx (nghiệp vụ): trả message cụ thể để client biết sai gì.
     res.status(err.statusCode).json({ success: false, message: err.message });
     return;
   }

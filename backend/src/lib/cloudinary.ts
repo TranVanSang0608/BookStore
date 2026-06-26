@@ -15,7 +15,9 @@ export interface UploadResult {
 export function uploadImage(buffer: Buffer, folder = 'bookstore'): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     cloudinary.uploader
-      .upload_stream({ folder, resource_type: 'image' }, (error, result) => {
+      // allowed_formats: Cloudinary GIẢI MÃ ảnh và từ chối nếu định dạng thật không thuộc danh sách
+      // → lớp chặn cuối, cùng với kiểm magic bytes ở controller (không tin mimetype client khai).
+      .upload_stream({ folder, resource_type: 'image', allowed_formats: ['jpg', 'jpeg', 'png', 'webp'] }, (error, result) => {
         if (error || !result) {
           reject(error ?? new Error('Cloudinary không trả về kết quả'));
           return;
@@ -29,6 +31,15 @@ export function uploadImage(buffer: Buffer, folder = 'bookstore'): Promise<Uploa
 // Xóa ảnh theo public_id (dùng khi admin đổi/xóa ảnh bìa sách)
 export async function deleteImage(publicId: string): Promise<void> {
   await cloudinary.uploader.destroy(publicId);
+}
+
+// Chặn admin nhập URL ảnh NGOÀI (tránh tracking IP/UA của khách + bypass rule upload):
+// chỉ chấp nhận URL giao ảnh của CHÍNH Cloudinary account này. Đọc cloud_name lazy (lúc validate
+// request, env đã nạp). Chưa cấu hình cloud_name → từ chối hết (fail-closed, an toàn mặc định).
+export function isOwnCloudinaryUrl(url: string): boolean {
+  const cloudName = cloudinary.config().cloud_name;
+  if (!cloudName) return false;
+  return url.startsWith(`https://res.cloudinary.com/${cloudName}/`);
 }
 
 export default cloudinary;

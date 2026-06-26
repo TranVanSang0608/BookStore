@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isOwnCloudinaryUrl } from '../../lib/cloudinary';
 
 // Schema cho query string của GET /api/books.
 // Query string luôn là string → z.coerce đổi sang số.
@@ -42,7 +43,11 @@ export const createBookSchema = z.object({
   stock_quantity: z.number().int('Tồn kho phải là số nguyên').min(0, 'Tồn kho không được âm'),
   author_id: z.number().int().positive('Vui lòng chọn tác giả'),
   category_ids: z.array(z.number().int().positive()).min(1, 'Chọn ít nhất 1 thể loại'),
-  cover_image_url: z.url('URL ảnh bìa không hợp lệ').optional(),
+  // Chỉ nhận URL ảnh do hệ thống upload (Cloudinary account mình) — chặn URL ngoài (tracking/bypass)
+  cover_image_url: z
+    .url('URL ảnh bìa không hợp lệ')
+    .refine(isOwnCloudinaryUrl, 'Ảnh bìa phải được tải lên qua hệ thống')
+    .optional(),
   isbn: z.string().max(20).optional(),
   publisher: z.string().max(255).optional(),
   published_year: z.number().int().min(1900, 'Năm xuất bản không hợp lệ').max(2100, 'Năm xuất bản không hợp lệ').optional(),

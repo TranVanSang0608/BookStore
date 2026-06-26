@@ -22,6 +22,16 @@ export default function CoverImage({ url, title, className = '' }: Props) {
       </div>
     )
   }
-  // loading="lazy": trình duyệt chỉ tải ảnh khi sắp cuộn tới — trang list nhiều sách nhẹ hơn
-  return <img src={url} alt={title} loading="lazy" className={`object-cover ${className}`} />
+  // loading="lazy": trình duyệt chỉ tải ảnh khi sắp cuộn tới — trang list nhiều sách nhẹ hơn.
+  // referrerPolicy="no-referrer": không gửi URL trang hiện tại khi tải ảnh (phòng rò referrer nếu
+  // lỡ có URL ảnh ngoài) — backend đã chặn URL ngoài nhưng đây là lớp phòng thủ thêm phía client.
+  return (
+    <img
+      src={url}
+      alt={title}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      className={`object-cover ${className}`}
+    />
+  )
 }

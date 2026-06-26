@@ -26,20 +26,26 @@ function ttlFor(type: EmailTokenType): number {
 // công nếu link cũ bị lộ). Cả 2 bước trong 1 transaction để không có khoảng "2 link cùng sống".
 export async function createEmailToken(userId: number, type: EmailTokenType): Promise<string> {
   const rawToken = randomBytes(32).toString('hex');
-  await prisma.$transaction([
-    prisma.emailToken.updateMany({
+  await prisma.$transaction(async (tx) => {
+    // KHÓA hàng User (FOR UPDATE) để SERIALIZE 2 request forgot/resend gần như đồng thời:
+    // không khóa thì cả hai cùng updateMany token cũ RỒI cùng create → 2 link cùng sống (DB chỉ
+    // unique theo token_hash, không ép "mỗi (user,type) 1 token active"). Khóa rồi thì request sau
+    // xếp hàng sau request trước, updateMany của nó vô hiệu luôn token request trước vừa tạo
+    // → chỉ link MỚI NHẤT còn tác dụng (đúng mục tiêu). Cùng họ pessimistic-lock đã dùng ở Phase 5/7.
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+    await tx.emailToken.updateMany({
       where: { user_id: userId, type, used_at: null },
       data: { used_at: new Date() },
-    }),
-    prisma.emailToken.create({
+    });
+    await tx.emailToken.create({
       data: {
         user_id: userId,
         token_hash: hashToken(rawToken),
         type,
         expires_at: new Date(Date.now() + ttlFor(type)),
       },
-    }),
-  ]);
+    });
+  });
   return rawToken;
 }
 

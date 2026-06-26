@@ -25,10 +25,18 @@ export async function register(input: RegisterInput) {
   // bcrypt cost 10: mỗi lần hash ~100ms — đủ chậm để chống dò pass, đủ nhanh cho UX
   const password_hash = await bcrypt.hash(input.password, 10);
 
-  const user = await prisma.user.create({
-    data: { email, password_hash, name: input.name, phone: input.phone },
-    select: PUBLIC_USER_SELECT,
-  });
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: { email, password_hash, name: input.name, phone: input.phone },
+      select: PUBLIC_USER_SELECT,
+    });
+  } catch (err) {
+    // Race: check ở trên qua nhưng 2 request cùng email tạo song song → 1 dính unique (P2002).
+    // Trả 409 thân thiện thay vì để bubble thành 500.
+    if (isUniqueViolation(err)) throw new AppError(409, 'Email đã được đăng ký');
+    throw err;
+  }
 
   // Gửi email xác thực (fail-soft): tạo token + gửi link. Lỗi gửi mail KHÔNG được làm
   // hỏng việc đăng ký — bọc try/catch, chỉ log. void = fire-and-forget không chờ gửi xong.
@@ -39,8 +47,9 @@ export async function register(input: RegisterInput) {
     logger.error('Không tạo được token xác thực email khi đăng ký (đã bỏ qua)', { err });
   }
 
-  // Đăng ký xong cấp token luôn — user không phải login lại lần nữa
-  const token = signToken({ sub: user.id, role: user.role });
+  // Đăng ký xong cấp token luôn — user không phải login lại lần nữa.
+  // User mới → token_version mặc định = 0 (DB default), nên tv: 0.
+  const token = signToken({ sub: user.id, role: user.role, tv: 0 });
   return { user, token };
 }
 
@@ -95,12 +104,15 @@ export async function forgotPassword(rawEmail: string) {
 }
 
 // Đặt lại mật khẩu — tiêu thụ token reset_password (dùng 1 lần) rồi đổi mật khẩu.
-// Trade-off JWT thuần (đã ghi từ Phase 1): token đăng nhập cũ vẫn sống tới hết hạn 7d;
-// thu hồi ngay cần RefreshToken (tier NICE, ngoài scope).
+// TĂNG token_version → mọi JWT đăng nhập cũ bị vô hiệu NGAY (quan trọng khi đặt lại mật khẩu
+// vì có thể tài khoản đang bị kẻ khác chiếm phiên): không còn phải chờ token hết hạn 7d.
 export async function resetPassword(rawToken: string, newPassword: string) {
   const userId = await consumeEmailToken(rawToken, 'reset_password');
   const password_hash = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { id: userId }, data: { password_hash } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password_hash, token_version: { increment: 1 } },
+  });
   return { reset: true };
 }
 
@@ -155,10 +167,15 @@ export async function loginWithGoogle(credential: string) {
     user = await prisma.user.update({ where: { id: user.id }, data: { email_verified: true } });
   }
 
-  const token = signToken({ sub: user.id, role: user.role });
-  const { password_hash: _ignored, ...publicUser } = user;
+  const token = signToken({ sub: user.id, role: user.role, tv: user.token_version ?? 0 });
+  const { password_hash: _ignored, token_version: _tv, ...publicUser } = user;
   return { user: publicUser, token };
 }
+
+// Hash giả CỐ ĐỊNH để so sánh khi user không tồn tại / tài khoản OAuth không có mật khẩu.
+// Mục đích: bcrypt.compare LUÔN chạy (cùng thời gian ~100ms) dù email có tồn tại hay không —
+// chống kẻ tấn công đo độ trễ để dò email nào đã đăng ký (timing oracle).
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync('khong-bao-gio-khop-mat-khau-that', 10);
 
 export async function login(input: LoginInput) {
   // Normalize giống register — user gõ "A@Test.com" vẫn login được tài khoản "a@test.com"
@@ -169,15 +186,14 @@ export async function login(input: LoginInput) {
   // không cho kẻ tấn công dò được email nào đã đăng ký (user enumeration)
   const invalidError = new AppError(401, 'Email hoặc mật khẩu không đúng');
 
-  // password_hash null = tài khoản OAuth (NICE sau này) — không login bằng password được
-  if (!user?.password_hash) throw invalidError;
+  // LUÔN chạy bcrypt.compare (kể cả khi không có user / tài khoản OAuth không có pass) để thời
+  // gian phản hồi NHẤT QUÁN — chống dò email qua đo độ trễ (timing oracle). Dùng hash giả nếu thiếu.
+  const passwordOk = await bcrypt.compare(input.password, user?.password_hash ?? DUMMY_PASSWORD_HASH);
+  if (!user?.password_hash || !passwordOk) throw invalidError;
 
-  const passwordOk = await bcrypt.compare(input.password, user.password_hash);
-  if (!passwordOk) throw invalidError;
+  const token = signToken({ sub: user.id, role: user.role, tv: user.token_version });
 
-  const token = signToken({ sub: user.id, role: user.role });
-
-  // Loại password_hash ra khỏi object trước khi trả về
-  const { password_hash: _ignored, ...publicUser } = user;
+  // Loại password_hash + token_version ra khỏi object trước khi trả về
+  const { password_hash: _ignored, token_version: _tv, ...publicUser } = user;
   return { user: publicUser, token };
 }

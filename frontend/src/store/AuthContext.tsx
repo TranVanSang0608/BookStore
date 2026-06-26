@@ -67,9 +67,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  // Thay token (giữ nguyên user). Dùng sau đổi mật khẩu: backend cấp token mới (tv mới) để
+  // phiên hiện tại không bị vô hiệu cùng các phiên cũ.
+  const updateToken = (token: string) => {
+    setAuth((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, token }
+      saveStoredAuth(next)
+      return next
+    })
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user: auth?.user ?? null, isLoggedIn: auth !== null, login, logout, updateUser }}
+      value={{ user: auth?.user ?? null, isLoggedIn: auth !== null, login, logout, updateUser, updateToken }}
     >
       {children}
     </AuthContext.Provider>

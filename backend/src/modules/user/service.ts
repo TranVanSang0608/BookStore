@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { signToken } from '../../lib/jwt';
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middleware/error';
 import { PUBLIC_USER_SELECT } from '../../utils/publicUser';
@@ -36,7 +37,12 @@ export async function changePassword(userId: number, input: ChangePasswordInput)
   if (!currentOk) throw new AppError(400, 'Mật khẩu hiện tại không đúng');
 
   const password_hash = await bcrypt.hash(input.new_password, 10);
-  await prisma.user.update({ where: { id: userId }, data: { password_hash } });
-  // Không trả gì — FE chỉ cần biết thành công. JWT cũ vẫn còn hạn (chấp nhận được
-  // với đồ án; muốn thu hồi token ngay cần bảng RefreshToken — tier NICE)
+  // TĂNG token_version → mọi JWT cũ (kể cả token kẻ khác đã chiếm) bị middleware auth từ chối ngay.
+  // Cấp token MỚI (tv mới) cho chính phiên đang đổi để user KHÔNG bị đăng xuất; chỉ các phiên
+  // khác (đang giữ token cũ) mới mất hiệu lực. FE thay token cũ bằng token này.
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { password_hash, token_version: { increment: 1 } },
+  });
+  return signToken({ sub: updated.id, role: updated.role, tv: updated.token_version });
 }

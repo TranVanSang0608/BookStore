@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { resetPasswordApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
@@ -9,8 +9,14 @@ import { focusFirstError, resetPasswordFormSchema, zodErrorsToMap } from '../../
 
 // Trang đặt lại mật khẩu: mở từ link ?token=... → nhập mật khẩu mới.
 export default function ResetPasswordPage() {
-  const [params] = useSearchParams()
-  const token = params.get('token') ?? ''
+  const [params, setParams] = useSearchParams()
+  // Bắt token MỘT LẦN vào state rồi XÓA khỏi thanh địa chỉ NGAY khi vào trang. Token reset sống
+  // tới 1 giờ — để nguyên trên URL thì dễ lộ qua lịch sử trình duyệt / ảnh chụp / copy URL / referrer.
+  const [token] = useState(() => params.get('token') ?? '')
+  useEffect(() => {
+    if (params.has('token')) setParams(new URLSearchParams(), { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const [form, setForm] = useState({ password: '', confirm_password: '' })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
