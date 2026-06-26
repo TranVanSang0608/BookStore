@@ -75,20 +75,40 @@ async function seedShippingZones(provinces: RawProvince[]) {
 
 // ---------- 3. Admin user ----------
 
+const DEFAULT_ADMIN_PASSWORD = 'Admin@123'; // CHỈ dùng cho dev — production bị chặn (xem dưới)
+
 async function seedAdmin() {
+  const isProd = process.env.NODE_ENV === 'production';
   const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@bookstore.vn';
-  const password = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123';
+  const envPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  // BẢO MẬT: ở production BẮT BUỘC tự đặt SEED_ADMIN_PASSWORD mạnh — KHÔNG cho rơi vào
+  // mật khẩu mặc định (nếu không ai cũng thử đăng nhập admin@bookstore.vn / Admin@123 để chiếm quyền).
+  // Dev vẫn cho dùng default cho tiện. Chặn từ chối seed nếu prod mà password yếu/mặc định.
+  if (isProd && (!envPassword || envPassword.length < 8 || envPassword === DEFAULT_ADMIN_PASSWORD)) {
+    throw new Error(
+      'Từ chối seed: production phải đặt SEED_ADMIN_PASSWORD mạnh (>= 8 ký tự, khác mật khẩu mặc định) trong .env.',
+    );
+  }
+
+  const password = envPassword ?? DEFAULT_ADMIN_PASSWORD;
 
   // bcrypt cost 10: cân bằng giữa an toàn và tốc độ login
   const password_hash = await bcrypt.hash(password, 10);
 
   await prisma.user.upsert({
     where: { email },
-    update: {}, // đã tồn tại thì giữ nguyên (không reset password mỗi lần seed)
+    // Có SEED_ADMIN_PASSWORD (env) → CẬP NHẬT hash + tăng token_version (vô hiệu token cũ) khi chạy
+    // lại seed: đổi env password rồi seed lại thì mật khẩu THỰC SỰ đổi (không kẹt hash cũ). Không có
+    // env (dev default) → giữ nguyên, không reset mỗi lần seed.
+    update: envPassword ? { password_hash, token_version: { increment: 1 } } : {},
     create: { email, password_hash, name: 'Quản trị viên', role: 'admin' },
   });
 
-  console.log(`✔ Admin: ${email} (đổi password mặc định trước khi deploy!)`);
+  const usingDefault = !envPassword;
+  console.log(
+    `✔ Admin: ${email}${usingDefault ? ' (mật khẩu MẶC ĐỊNH — chỉ dùng cho dev, ĐỔI trước khi deploy!)' : ''}`,
+  );
 }
 
 // ---------- 4. Catalog mẫu: Category, Author, Book ----------
@@ -116,6 +136,21 @@ const AUTHORS = [
   'Eric Ries', 'Daniel Kahneman', 'Minh Niệm', 'Nguyên Phong', 'Kishimi Ichiro', 'Eckhart Tolle',
   'Stephen Hawking', 'Richard Dawkins', 'Trần Trọng Kim', 'Jared Diamond', 'Fujiko F. Fujio',
   'Aoyama Gosho', 'Lê Linh', 'Eiichiro Oda',
+  // bổ sung Phase 11 — sách kinh điển (văn học VN & thế giới)
+  'Nguyễn Tuân', 'Thạch Lam', 'Nguyên Hồng', 'Lev Tolstoy', 'Fyodor Dostoevsky', 'Mario Puzo',
+  'Margaret Mitchell', 'Jane Austen', 'Harper Lee', 'George Orwell', 'Jack London', 'J.D. Salinger',
+  // thiếu nhi
+  'Astrid Lindgren', 'Edmondo De Amicis', 'Lewis Carroll', 'Hans Christian Andersen', 'Roald Dahl',
+  'Nguyễn Ngọc Thuần', 'J.K. Rowling',
+  // kỹ năng sống & kinh tế
+  'Tony Buổi Sáng', 'Og Mandino', 'Chung Ju Yung', 'James Clear', 'Mark Manson',
+  'Benjamin Graham', 'Jim Collins', 'Phil Knight', 'Malcolm Gladwell', 'Dan Ariely',
+  // tâm lý & khoa học
+  'Viktor Frankl', 'Daniel Goleman', 'Thích Nhất Hạnh', 'Hae Min', 'Paul Kalanithi',
+  'Carl Sagan', 'Charles Darwin', 'Carlo Rovelli', 'Bill Bryson',
+  // lịch sử / cổ điển Trung Hoa & truyện tranh
+  'La Quán Trung', 'Ngô Thừa Ân', 'Tư Mã Thiên',
+  'Masashi Kishimoto', 'Akira Toriyama', 'Yoshito Usui',
 ];
 
 // slug sách là unique key để upsert; price đơn vị đồng (VND).
@@ -204,6 +239,69 @@ const BOOKS: SeedBook[] = [
   { title: 'Thám Tử Lừng Danh Conan (Tập 1)', slug: 'tham-tu-lung-danh-conan-tap-1', author: 'Aoyama Gosho', price: 20_000, stock: 90, categories: ['truyen-tranh'], description: 'Conan trong hình hài cậu bé phá giải những vụ án hóc búa.', publisher: 'NXB Kim Đồng', published_year: 2022, pages: 184 },
   { title: 'Thần Đồng Đất Việt (Tập 1)', slug: 'than-dong-dat-viet-tap-1', author: 'Lê Linh', price: 18_000, stock: 85, categories: ['truyen-tranh', 'thieu-nhi'], description: 'Trạng Tí thông minh cùng nhóm bạn trong bộ truyện tranh Việt nổi tiếng.', publisher: 'NXB Trẻ', published_year: 2021, pages: 160 },
   { title: 'One Piece (Tập 1)', slug: 'one-piece-tap-1', author: 'Eiichiro Oda', price: 20_000, stock: 80, categories: ['truyen-tranh'], description: 'Hành trình tìm kho báu One Piece của Luffy và băng hải tặc Mũ Rơm.', publisher: 'NXB Kim Đồng', published_year: 2022, pages: 200 },
+
+  // ===== Sách kinh điển bổ sung (Phase 11 — +46 cuốn cho kho phong phú) =====
+  // -- Văn học (VN & thế giới) --
+  { title: 'Giông Tố', slug: 'giong-to', author: 'Vũ Trọng Phụng', price: 92_000, stock: 35, categories: ['van-hoc'], description: 'Tiểu thuyết phơi bày xã hội thực dân nửa phong kiến qua bi kịch của Thị Mịch và Nghị Hách.', publisher: 'NXB Văn Học', published_year: 2019, pages: 380 },
+  { title: 'Vang Bóng Một Thời', slug: 'vang-bong-mot-thoi', author: 'Nguyễn Tuân', price: 78_000, stock: 30, categories: ['van-hoc'], description: 'Tập truyện về nét đẹp tài hoa của lớp nho sĩ xưa — văn chương Nguyễn Tuân uyên bác, tài hoa.', publisher: 'NXB Hội Nhà Văn', published_year: 2020, pages: 240 },
+  { title: 'Gió Lạnh Đầu Mùa', slug: 'gio-lanh-dau-mua', author: 'Thạch Lam', price: 65_000, stock: 40, categories: ['van-hoc'], description: 'Tuyển tập truyện ngắn trữ tình, nhẹ nhàng mà sâu lắng về những phận người bình dị.', publisher: 'NXB Văn Học', published_year: 2021, pages: 200 },
+  { title: 'Bỉ Vỏ', slug: 'bi-vo', author: 'Nguyên Hồng', price: 70_000, stock: 30, categories: ['van-hoc'], description: 'Số phận bi thảm của Tám Bính giữa thế giới lưu manh nơi đất Cảng trước Cách mạng.', publisher: 'NXB Văn Học', published_year: 2019, pages: 220 },
+  { title: 'Chiến Tranh Và Hòa Bình', slug: 'chien-tranh-va-hoa-binh', author: 'Lev Tolstoy', price: 385_000, stock: 18, categories: ['van-hoc'], description: 'Sử thi đồ sộ về nước Nga thời chiến tranh chống Napoleon — đỉnh cao văn học thế giới.', publisher: 'NXB Văn Học', published_year: 2020, pages: 1700 },
+  { title: 'Tội Ác Và Hình Phạt', slug: 'toi-ac-va-hinh-phat', author: 'Fyodor Dostoevsky', price: 175_000, stock: 25, categories: ['van-hoc', 'tam-ly'], description: 'Cuộc giằng xé nội tâm của chàng sinh viên Raskolnikov sau khi gây án — kiệt tác tâm lý.', publisher: 'Nhã Nam', published_year: 2021, pages: 680 },
+  { title: 'Bố Già', slug: 'bo-gia', author: 'Mario Puzo', price: 155_000, stock: 35, categories: ['van-hoc'], description: 'Thế giới ngầm của gia đình mafia Corleone — tiểu thuyết về quyền lực, gia đình và danh dự.', publisher: 'NXB Văn Học', published_year: 2022, pages: 600 },
+  { title: 'Cuốn Theo Chiều Gió', slug: 'cuon-theo-chieu-gio', author: 'Margaret Mitchell', price: 245_000, stock: 22, categories: ['van-hoc'], description: 'Tình yêu và sinh tồn của nàng Scarlett giữa cuộc Nội chiến Mỹ — giải Pulitzer 1937.', publisher: 'NXB Văn Học', published_year: 2021, pages: 1100 },
+  { title: 'Kiêu Hãnh Và Định Kiến', slug: 'kieu-hanh-va-dinh-kien', author: 'Jane Austen', price: 110_000, stock: 35, categories: ['van-hoc'], description: 'Chuyện tình duyên trắc trở giữa Elizabeth và quý ông Darcy trong xã hội Anh thế kỷ 19.', publisher: 'Nhã Nam', published_year: 2020, pages: 420 },
+  { title: 'Giết Con Chim Nhại', slug: 'giet-con-chim-nhai', author: 'Harper Lee', price: 125_000, stock: 30, categories: ['van-hoc'], description: 'Công lý và định kiến chủng tộc qua đôi mắt trẻ thơ ở miền Nam nước Mỹ — Pulitzer 1961.', publisher: 'Nhã Nam', published_year: 2022, pages: 380 },
+  { title: '1984', slug: '1984', author: 'George Orwell', price: 108_000, stock: 40, categories: ['van-hoc'], description: 'Xã hội toàn trị bị giám sát tuyệt đối dưới con mắt Anh Cả — tiểu thuyết phản địa đàng kinh điển.', publisher: 'Nhã Nam', published_year: 2021, pages: 400 },
+  { title: 'Nhà Thờ Đức Bà Paris', slug: 'nha-tho-duc-ba-paris', author: 'Victor Hugo', price: 165_000, stock: 25, categories: ['van-hoc'], description: 'Bi kịch của chàng gù Quasimodo và nàng Esmeralda dưới bóng nhà thờ Đức Bà.', publisher: 'NXB Văn Học', published_year: 2020, pages: 520 },
+  { title: 'Tiếng Gọi Nơi Hoang Dã', slug: 'tieng-goi-noi-hoang-da', author: 'Jack London', price: 72_000, stock: 40, categories: ['van-hoc'], description: 'Hành trình trở về bản năng hoang dã của chú chó Buck nơi vùng băng giá Alaska.', publisher: 'Nhã Nam', published_year: 2021, pages: 180 },
+  { title: 'Bắt Trẻ Đồng Xanh', slug: 'bat-tre-dong-xanh', author: 'J.D. Salinger', price: 95_000, stock: 35, categories: ['van-hoc'], description: 'Mấy ngày lang thang của cậu thiếu niên Holden — tiếng nói nổi loạn của tuổi mới lớn.', publisher: 'Nhã Nam', published_year: 2020, pages: 260 },
+
+  // -- Thiếu nhi --
+  { title: 'Pippi Tất Dài', slug: 'pippi-tat-dai', author: 'Astrid Lindgren', price: 78_000, stock: 50, categories: ['thieu-nhi'], description: 'Cô bé Pippi khỏe nhất thế giới và những trò nghịch ngợm khiến trẻ em mê mẩn.', publisher: 'NXB Kim Đồng', published_year: 2021, pages: 200 },
+  { title: 'Những Tấm Lòng Cao Cả', slug: 'nhung-tam-long-cao-ca', author: 'Edmondo De Amicis', price: 88_000, stock: 40, categories: ['thieu-nhi', 'van-hoc'], description: 'Nhật ký cậu học trò Enrico — những bài học cảm động về lòng nhân ái và tình thầy trò.', publisher: 'NXB Kim Đồng', published_year: 2020, pages: 320 },
+  { title: 'Alice Ở Xứ Sở Thần Tiên', slug: 'alice-o-xu-so-than-tien', author: 'Lewis Carroll', price: 75_000, stock: 50, categories: ['thieu-nhi'], description: 'Cuộc phiêu lưu kỳ ảo của Alice qua xứ sở diệu kỳ đầy nhân vật lạ lùng.', publisher: 'Nhã Nam', published_year: 2022, pages: 180 },
+  { title: 'Truyện Cổ Andersen', slug: 'truyen-co-andersen', author: 'Hans Christian Andersen', price: 135_000, stock: 45, categories: ['thieu-nhi'], description: 'Tuyển tập cổ tích bất hủ: Cô Bé Bán Diêm, Nàng Tiên Cá, Vịt Con Xấu Xí...', publisher: 'NXB Kim Đồng', published_year: 2021, pages: 480 },
+  { title: 'Charlie Và Nhà Máy Sô Cô La', slug: 'charlie-va-nha-may-so-co-la', author: 'Roald Dahl', price: 82_000, stock: 50, categories: ['thieu-nhi'], description: 'Cậu bé Charlie và tấm vé vàng vào nhà máy sô cô la kỳ diệu của ông Wonka.', publisher: 'Nhã Nam', published_year: 2022, pages: 220 },
+  { title: 'Vừa Nhắm Mắt Vừa Mở Cửa Sổ', slug: 'vua-nham-mat-vua-mo-cua-so', author: 'Nguyễn Ngọc Thuần', price: 68_000, stock: 45, categories: ['thieu-nhi', 'van-hoc'], description: 'Thế giới trong trẻo của cậu bé miền quê tập cảm nhận cuộc sống bằng mọi giác quan.', publisher: 'NXB Trẻ', published_year: 2021, pages: 180 },
+  { title: 'Harry Potter Và Hòn Đá Phù Thủy', slug: 'harry-potter-va-hon-da-phu-thuy', author: 'J.K. Rowling', price: 145_000, stock: 60, categories: ['thieu-nhi', 'van-hoc'], description: 'Cậu bé Harry khám phá thân phận phù thủy và bước vào trường Hogwarts kỳ diệu.', publisher: 'NXB Trẻ', published_year: 2022, pages: 380 },
+
+  // -- Kỹ năng sống --
+  { title: 'Cà Phê Cùng Tony', slug: 'ca-phe-cung-tony', author: 'Tony Buổi Sáng', price: 90_000, stock: 55, categories: ['ky-nang-song'], description: 'Những bài viết dí dỏm mà sâu cay về tư duy và thái độ sống cho người trẻ.', publisher: 'NXB Trẻ', published_year: 2022, pages: 290 },
+  { title: 'Người Bán Hàng Vĩ Đại Nhất Thế Giới', slug: 'nguoi-ban-hang-vi-dai-nhat-the-gioi', author: 'Og Mandino', price: 72_000, stock: 45, categories: ['ky-nang-song'], description: 'Mười cuộn da bí mật chứa đựng triết lý thành công trong nghề bán hàng và cuộc sống.', publisher: 'First News', published_year: 2020, pages: 180 },
+  { title: 'Không Bao Giờ Là Thất Bại - Tất Cả Là Thử Thách', slug: 'khong-bao-gio-la-that-bai', author: 'Chung Ju Yung', price: 98_000, stock: 40, categories: ['ky-nang-song'], description: 'Tự truyện của nhà sáng lập Hyundai — tinh thần dám nghĩ dám làm vượt mọi nghịch cảnh.', publisher: 'First News', published_year: 2021, pages: 320 },
+  { title: 'Thói Quen Nguyên Tử', slug: 'thoi-quen-nguyen-tu', author: 'James Clear', price: 152_000, stock: 50, categories: ['ky-nang-song'], description: 'Cách xây dựng thói quen tốt và xóa bỏ thói quen xấu bằng những thay đổi nhỏ mỗi ngày.', publisher: 'NXB Thế Giới', published_year: 2022, pages: 320 },
+  { title: 'Nghệ Thuật Tinh Tế Của Việc Đếch Quan Tâm', slug: 'nghe-thuat-tinh-te-cua-viec-dech-quan-tam', author: 'Mark Manson', price: 109_000, stock: 45, categories: ['ky-nang-song', 'tam-ly'], description: 'Học cách chọn lọc điều đáng quan tâm để sống nhẹ nhõm và ý nghĩa hơn.', publisher: 'NXB Văn Học', published_year: 2021, pages: 260 },
+
+  // -- Kinh tế --
+  { title: 'Nhà Đầu Tư Thông Minh', slug: 'nha-dau-tu-thong-minh', author: 'Benjamin Graham', price: 215_000, stock: 30, categories: ['kinh-te'], description: 'Kinh thánh của đầu tư giá trị — nền tảng tư duy của Warren Buffett.', publisher: 'NXB Tổng Hợp', published_year: 2021, pages: 640 },
+  { title: 'Từ Tốt Đến Vĩ Đại', slug: 'tu-tot-den-vi-dai', author: 'Jim Collins', price: 145_000, stock: 35, categories: ['kinh-te'], description: 'Vì sao một số công ty bứt phá thành vĩ đại còn số khác thì không.', publisher: 'NXB Trẻ', published_year: 2020, pages: 400 },
+  { title: 'Gã Nghiện Giày', slug: 'ga-nghien-giay', author: 'Phil Knight', price: 168_000, stock: 35, categories: ['kinh-te'], description: 'Hồi ký nhà sáng lập Nike — hành trình khởi nghiệp đầy mạo hiểm và đam mê.', publisher: 'NXB Lao Động', published_year: 2022, pages: 450 },
+  { title: 'Những Kẻ Xuất Chúng', slug: 'nhung-ke-xuat-chung', author: 'Malcolm Gladwell', price: 128_000, stock: 35, categories: ['kinh-te', 'tam-ly'], description: 'Điều gì thật sự làm nên người thành công — không chỉ tài năng mà cả hoàn cảnh và may mắn.', publisher: 'Nhã Nam', published_year: 2021, pages: 350 },
+  { title: 'Phi Lý Trí', slug: 'phi-ly-tri', author: 'Dan Ariely', price: 119_000, stock: 35, categories: ['kinh-te', 'tam-ly'], description: 'Những sai lầm phi lý có hệ thống chi phối quyết định mua sắm và lựa chọn của con người.', publisher: 'NXB Lao Động', published_year: 2020, pages: 380 },
+
+  // -- Tâm lý --
+  { title: 'Đi Tìm Lẽ Sống', slug: 'di-tim-le-song', author: 'Viktor Frankl', price: 78_000, stock: 45, categories: ['tam-ly'], description: 'Bác sĩ tâm thần sống sót qua trại tập trung và bài học sâu sắc về ý nghĩa cuộc đời.', publisher: 'NXB Tổng Hợp', published_year: 2021, pages: 220 },
+  { title: 'Trí Tuệ Xúc Cảm', slug: 'tri-tue-xuc-cam', author: 'Daniel Goleman', price: 139_000, stock: 35, categories: ['tam-ly'], description: 'Vì sao EQ quan trọng hơn IQ trong thành công và hạnh phúc của con người.', publisher: 'NXB Lao Động', published_year: 2020, pages: 460 },
+  { title: 'An Lạc Từng Bước Chân', slug: 'an-lac-tung-buoc-chan', author: 'Thích Nhất Hạnh', price: 72_000, stock: 50, categories: ['tam-ly'], description: 'Thực tập chánh niệm trong đời sống hằng ngày để tìm bình an ngay bây giờ.', publisher: 'NXB Hội Nhà Văn', published_year: 2022, pages: 200 },
+  { title: 'Bước Chậm Lại Giữa Thế Gian Vội Vã', slug: 'buoc-cham-lai-giua-the-gian-voi-va', author: 'Hae Min', price: 95_000, stock: 45, categories: ['tam-ly'], description: 'Những lời nhắn nhủ nhẹ nhàng giúp tâm hồn lắng lại giữa cuộc sống hối hả.', publisher: 'NXB Hội Nhà Văn', published_year: 2021, pages: 280 },
+  { title: 'Khi Hơi Thở Hóa Thinh Không', slug: 'khi-hoi-tho-hoa-thinh-khong', author: 'Paul Kalanithi', price: 88_000, stock: 40, categories: ['tam-ly', 'van-hoc'], description: 'Hồi ký xúc động của bác sĩ trẻ đối diện cái chết — đi tìm ý nghĩa của sự sống.', publisher: 'NXB Lao Động', published_year: 2022, pages: 240 },
+
+  // -- Khoa học --
+  { title: 'Vũ Trụ', slug: 'vu-tru-cosmos', author: 'Carl Sagan', price: 198_000, stock: 25, categories: ['khoa-hoc'], description: 'Hành trình kỳ vĩ khám phá vũ trụ và vị trí của con người trong dải ngân hà.', publisher: 'Nhã Nam', published_year: 2021, pages: 500 },
+  { title: 'Nguồn Gốc Các Loài', slug: 'nguon-goc-cac-loai', author: 'Charles Darwin', price: 185_000, stock: 22, categories: ['khoa-hoc'], description: 'Học thuyết tiến hóa bằng chọn lọc tự nhiên — công trình thay đổi sinh học mãi mãi.', publisher: 'NXB Tri Thức', published_year: 2020, pages: 560 },
+  { title: '7 Bài Học Hay Nhất Về Vật Lý', slug: '7-bai-hoc-hay-nhat-ve-vat-ly', author: 'Carlo Rovelli', price: 65_000, stock: 35, categories: ['khoa-hoc'], description: 'Bảy bài viết ngắn gọn, thi vị giới thiệu những ý tưởng lớn của vật lý hiện đại.', publisher: 'Nhã Nam', published_year: 2021, pages: 110 },
+  { title: 'Lược Sử Vạn Vật', slug: 'luoc-su-van-vat', author: 'Bill Bryson', price: 215_000, stock: 25, categories: ['khoa-hoc'], description: 'Câu chuyện hấp dẫn về khoa học — từ vụ nổ Big Bang đến sự sống trên Trái Đất.', publisher: 'Nhã Nam', published_year: 2022, pages: 600 },
+
+  // -- Lịch sử & cổ điển Trung Hoa --
+  { title: 'Tam Quốc Diễn Nghĩa', slug: 'tam-quoc-dien-nghia', author: 'La Quán Trung', price: 320_000, stock: 25, categories: ['van-hoc', 'lich-su'], description: 'Bộ tiểu thuyết lịch sử về thời Tam Quốc với Lưu Bị, Tào Tháo, Khổng Minh.', publisher: 'NXB Văn Học', published_year: 2020, pages: 1500 },
+  { title: 'Tây Du Ký', slug: 'tay-du-ky', author: 'Ngô Thừa Ân', price: 285_000, stock: 30, categories: ['van-hoc', 'thieu-nhi'], description: 'Bốn thầy trò Đường Tăng vượt 81 kiếp nạn thỉnh kinh — kiệt tác cổ điển Trung Hoa.', publisher: 'NXB Văn Học', published_year: 2021, pages: 1400 },
+  { title: 'Sử Ký Tư Mã Thiên', slug: 'su-ky-tu-ma-thien', author: 'Tư Mã Thiên', price: 175_000, stock: 22, categories: ['lich-su'], description: 'Bộ sử vĩ đại ghi chép hơn hai nghìn năm lịch sử Trung Hoa cổ đại.', publisher: 'NXB Văn Học', published_year: 2020, pages: 700 },
+
+  // -- Truyện tranh --
+  { title: 'Naruto (Tập 1)', slug: 'naruto-tap-1', author: 'Masashi Kishimoto', price: 20_000, stock: 80, categories: ['truyen-tranh'], description: 'Cậu nhẫn giả Naruto trên hành trình trở thành Hokage của làng Lá.', publisher: 'NXB Kim Đồng', published_year: 2022, pages: 192 },
+  { title: 'Dragon Ball (Tập 1)', slug: 'dragon-ball-tap-1', author: 'Akira Toriyama', price: 18_000, stock: 85, categories: ['truyen-tranh', 'thieu-nhi'], description: 'Songoku đi tìm bảy viên ngọc rồng — bộ truyện huyền thoại của tuổi thơ.', publisher: 'NXB Kim Đồng', published_year: 2022, pages: 192 },
+  { title: 'Shin - Cậu Bé Bút Chì (Tập 1)', slug: 'shin-cau-be-but-chi-tap-1', author: 'Yoshito Usui', price: 20_000, stock: 80, categories: ['truyen-tranh', 'thieu-nhi'], description: 'Những tình huống lầy lội đáng yêu của cậu nhóc Shin năm tuổi.', publisher: 'NXB Kim Đồng', published_year: 2021, pages: 160 },
 ];
 
 async function seedCatalog() {
@@ -360,7 +458,7 @@ async function seedDemoData() {
       }
     }
   }
-  console.log(`✔ Khách demo: ${DEMO_CUSTOMERS.length} (mật khẩu chung: ${DEMO_PASSWORD})`);
+  console.log(`✔ Khách demo: ${DEMO_CUSTOMERS.length} tài khoản (mật khẩu cấu hình trong seed.ts)`);
 
   // --- 6b. Đơn hàng demo (snapshot từ giá HIỆN TẠI — đủ cho demo) ---
   const books = await prisma.book.findMany({ include: { author: true } });
@@ -457,7 +555,15 @@ async function main() {
   await seedAdmin();
   await seedCatalog();
   await seedVouchers();
-  await seedDemoData();
+
+  // Dữ liệu demo (khách mẫu mật khẩu chung + đơn + review) CHỈ seed khi BẬT RÕ RÀNG
+  // SEED_DEMO_DATA=true VÀ KHÔNG ở production — tránh tạo tài khoản khách dùng chung mật khẩu
+  // trên môi trường công khai (ai cũng đăng nhập được khach1/khach2 với Demo@123).
+  if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO_DATA === 'true') {
+    await seedDemoData();
+  } else {
+    console.log('⏭ Bỏ qua dữ liệu demo (chỉ seed khi SEED_DEMO_DATA=true và không phải production)');
+  }
 }
 
 main()
