@@ -12,7 +12,9 @@ services:
     # migrate deploy chạy ở cuối build (free tier không có Pre-Deploy Command riêng).
     # migrate deploy CHỈ áp các migration còn thiếu nên chạy lại an toàn. Seed chạy 1 lần
     # thủ công qua Shell sau lần deploy đầu (xem DEPLOY.md) — KHÔNG đưa seed vào build.
-    buildCommand: npm install && npm run build && npx prisma migrate deploy
+    # --include=dev: BẮT BUỘC cài devDependencies (typescript + @types/*) dù NODE_ENV=production —
+    # nếu không Render bỏ qua devDeps → tsc build thiếu type của express/bcrypt/jsonwebtoken... → fail.
+    buildCommand: npm install --include=dev && npm run build && npx prisma migrate deploy
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
