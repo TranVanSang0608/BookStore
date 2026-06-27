@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { getClientIp } from '../../lib/client-ip';
-import { logger } from '../../lib/logger';
 import { verifyCallback } from '../../lib/vnpay';
 import * as paymentService from './service';
 
@@ -19,15 +18,7 @@ export async function vnpayReturn(req: Request, res: Response) {
   const query = req.query as Record<string, string>;
 
   // Sai chữ ký = dữ liệu bị giả mạo trên đường truyền → không tin, không cập nhật gì
-  const check = verifyCallback(query);
-  if (!check.valid) {
-    // DEBUG TẠM (xóa sau khi sửa xong): in chữ ký nhận vs tính + chuỗi ký + params để soi chỗ lệch
-    logger.warn('[VNPay return] chữ ký KHÔNG khớp', {
-      received: check.received,
-      expected: check.expected,
-      signData: check.signData,
-      query,
-    });
+  if (!verifyCallback(query).valid) {
     res.redirect(`${FRONTEND}/orders?payment=invalid`);
     return;
   }
@@ -44,15 +35,7 @@ export async function vnpayReturn(req: Request, res: Response) {
 export async function vnpayIpn(req: Request, res: Response) {
   const query = req.query as Record<string, string>;
 
-  const check = verifyCallback(query);
-  if (!check.valid) {
-    // DEBUG TẠM (xóa sau khi sửa xong)
-    logger.warn('[VNPay IPN] chữ ký KHÔNG khớp', {
-      received: check.received,
-      expected: check.expected,
-      signData: check.signData,
-      query,
-    });
+  if (!verifyCallback(query).valid) {
     res.json({ RspCode: '97', Message: 'Invalid signature' });
     return;
   }
