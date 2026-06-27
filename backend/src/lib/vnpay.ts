@@ -108,7 +108,12 @@ export function buildPaymentUrl({ txnRef, amount, orderInfo, ipAddr }: BuildPaym
 
 // Xác thực callback (Return + IPN) từ VNPay: ký lại phần tham số (bỏ vnp_SecureHash)
 // rồi so với chữ ký VNPay gửi. Khớp → dữ liệu chưa bị sửa trên đường truyền.
-export function verifyCallback(query: Record<string, string>): { valid: boolean } {
+export function verifyCallback(query: Record<string, string>): {
+  valid: boolean;
+  received: string;
+  expected: string;
+  signData: string;
+} {
   const received = (query.vnp_SecureHash ?? '').toLowerCase();
 
   // Bỏ 2 field chữ ký ra khỏi dữ liệu cần ký lại
@@ -116,6 +121,8 @@ export function verifyCallback(query: Record<string, string>): { valid: boolean 
   delete params.vnp_SecureHash;
   delete params.vnp_SecureHashType;
 
-  const expected = sign(sortObject(params), getVnpConfig().hashSecret);
-  return { valid: hashEquals(received, expected) };
+  const sorted = sortObject(params);
+  const signData = toQueryString(sorted); // chuỗi đem ký — để debug khi lệch
+  const expected = sign(sorted, getVnpConfig().hashSecret);
+  return { valid: hashEquals(received, expected), received, expected, signData };
 }
