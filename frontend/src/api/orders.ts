@@ -48,7 +48,8 @@ export interface OrderSummary {
   status: OrderStatus
   total: number
   placed_at: string
-  items: Array<{ book_title: string; quantity: number }>
+  // book.slug để link "Đánh giá" sang chi tiết sách; null nếu sách đã bị xóa
+  items: Array<{ book_title: string; quantity: number; book: { slug: string } | null }>
 }
 
 // 1 dòng trong bảng admin

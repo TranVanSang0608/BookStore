@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { Minus, Plus, ShoppingCart } from 'lucide-react'
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Minus, Plus, ShoppingCart, Zap } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { fetchBookBySlug } from '../../api/books'
 import { getApiErrorMessage } from '../../api/client'
 import CoverImage from '../../features/catalog/CoverImage'
@@ -17,12 +17,15 @@ import { formatPrice } from '../../lib/format'
 // không làm re-render cả trang chi tiết
 function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
   const { addItem } = useCart()
+  const navigate = useNavigate()
   const [qty, setQty] = useState(1)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [adding, setAdding] = useState(false)
+  const [buying, setBuying] = useState(false)
 
   const maxQty = Math.min(stock, 99)
+  const busy = adding || buying
 
   // Clamp số lượng 1..maxQty (dùng cho cả nút −/+ lẫn gõ tay)
   function clampQty(v: number) {
@@ -44,6 +47,21 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
     }
   }
 
+  // Mua ngay = thêm sách vào giỏ rồi sang thẳng checkout. Khách chưa đăng nhập sẽ bị
+  // RequireAuth đưa qua /login rồi quay lại /checkout (giỏ guest merge vào — như luồng sẵn có).
+  async function handleBuyNow() {
+    setMessage('')
+    setError('')
+    setBuying(true)
+    try {
+      await addItem(bookId, qty, stock)
+      navigate('/checkout')
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+      setBuying(false) // lỗi thì ở lại trang; thành công thì đã điều hướng đi
+    }
+  }
+
   if (stock === 0) {
     return (
       <button className="btn btn-primary w-fit" disabled>
@@ -54,7 +72,7 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         {/* Stepper số lượng: nút − [ô số] + */}
         <div className="join border border-base-300 rounded-lg">
           <button
@@ -85,9 +103,13 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
             <Plus size={16} />
           </button>
         </div>
-        <button className="btn btn-primary gap-2" onClick={handleAdd} disabled={adding}>
+        <button className="btn btn-primary gap-2" onClick={handleAdd} disabled={busy}>
           {adding ? <span className="loading loading-spinner loading-sm" /> : <ShoppingCart size={18} />}
           Thêm vào giỏ
+        </button>
+        <button className="btn btn-outline btn-primary gap-2" onClick={handleBuyNow} disabled={busy}>
+          {buying ? <span className="loading loading-spinner loading-sm" /> : <Zap size={18} />}
+          Mua ngay
         </button>
       </div>
       {message && <p className="text-success text-sm">{message}</p>}
@@ -98,13 +120,22 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
 
 export default function BookDetailPage() {
   const { slug } = useParams()
-  const [tab, setTab] = useState<'desc' | 'info' | 'reviews'>('desc')
+  const [searchParams] = useSearchParams()
+  // Mở từ link "Đánh giá" (đơn đã giao) có ?tab=reviews → mở sẵn tab Đánh giá
+  const wantsReview = searchParams.get('tab') === 'reviews'
+  const [tab, setTab] = useState<'desc' | 'info' | 'reviews'>(wantsReview ? 'reviews' : 'desc')
+  const tabsRef = useRef<HTMLDivElement>(null)
 
   const { data: book, isPending, isError } = useQuery({
     queryKey: ['book', slug],
     queryFn: () => fetchBookBySlug(slug!),
   })
   useDocumentTitle(book?.title) // load xong → tab hiện tên sách
+
+  // ?tab=reviews: khi sách tải xong thì cuộn tới khu tab (để thấy ngay ô viết đánh giá)
+  useEffect(() => {
+    if (book && wantsReview) tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [book, wantsReview])
 
   if (isPending) {
     return (
@@ -211,7 +242,7 @@ export default function BookDetailPage() {
       </div>
 
       {/* ===== TABS ===== */}
-      <div className="mt-8 bg-base-100 border border-base-300 rounded-box p-6">
+      <div ref={tabsRef} className="mt-8 bg-base-100 border border-base-300 rounded-box p-6 scroll-mt-4">
         <div role="tablist" className="flex gap-1 border-b border-base-300">
           {tabs.map((t) => (
             <button

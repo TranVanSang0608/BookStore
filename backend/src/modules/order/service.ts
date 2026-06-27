@@ -294,7 +294,8 @@ export async function getUserOrders(userId: number, query: ListOrdersQuery) {
         status: true,
         total: true,
         placed_at: true,
-        items: { select: { book_title: true, quantity: true } },
+        // book.slug để FE link sang chi tiết sách (nút "Đánh giá" cho đơn đã giao); null nếu sách đã xóa
+        items: { select: { book_title: true, quantity: true, book: { select: { slug: true } } } },
       },
     }),
     prisma.order.count({ where }),

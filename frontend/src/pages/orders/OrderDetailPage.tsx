@@ -194,6 +194,15 @@ export default function OrderDetailPage() {
                       <p className="font-medium">{item.book_title}</p>
                     )}
                     <p className="text-sm text-base-content/70">{item.book_author_name}</p>
+                    {/* Đơn đã giao → cho đánh giá: link mở trang sách + tab Đánh giá sẵn */}
+                    {order.status === 'Delivered' && item.book && (
+                      <Link
+                        to={`/books/${item.book.slug}?tab=reviews`}
+                        className="link link-primary text-xs"
+                      >
+                        ★ Đánh giá
+                      </Link>
+                    )}
                   </td>
                   <td className="whitespace-nowrap">{formatPrice(item.price_at_order)}</td>
                   <td>{item.quantity}</td>
