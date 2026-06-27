@@ -1,0 +1,10 @@
+{
+  "//": "Config dành riêng cho BUILD production (npm run build): KHÔNG biên dịch file test và",
+  "//2": "không cần type 'jest' (devDependency có thể vắng ở môi trường production). Typecheck/test",
+  "//3": "vẫn dùng tsconfig.json gốc (có jest + gồm cả tests).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "exclude": ["src/tests", "**/*.test.ts"]
+}
