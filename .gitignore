@@ -22,3 +22,16 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Báo cáo / tài liệu nộp + artifact local (không thuộc mã nguồn)
+*.docx
+BAO-CAO-*.md
+KE-HOACH-*.md
+CAI-THIEN-*.md
+NGHIEM-THU.md
+bao-cao-screenshots/
+image.png
+BookStore giao diện hoàn chỉnh/
+
+# Ảnh thử upload ở local (ảnh thật lưu trên Cloudinary)
+backend/covers/
