@@ -10,10 +10,13 @@ import {
   type AuthorInput,
 } from '../../api/authors'
 import { getApiErrorMessage } from '../../api/client'
+import AdminModal from '../../components/AdminModal'
 
 export default function AdminAuthorsPage() {
   // editing: null = đang tạo mới | AuthorOption = đang sửa tác giả đó
   const [editing, setEditing] = useState<AuthorOption | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [bioLoading, setBioLoading] = useState(false) // tải tiểu sử khi mở sửa
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [error, setError] = useState('')
@@ -31,6 +34,34 @@ export default function AdminAuthorsPage() {
     setError('')
   }
 
+  function openCreate() {
+    resetForm()
+    setModalOpen(true)
+  }
+  // Sửa: mở modal NGAY (hiện tên có sẵn từ list), rồi tải tiểu sử (bio) đổ vào sau —
+  // list chỉ trả id+name, bio phải gọi detail mới có (D — endpoint list gọn).
+  async function openEdit(author: AuthorOption) {
+    setError('')
+    setEditing(author)
+    setName(author.name)
+    setBio('')
+    setBioLoading(true)
+    setModalOpen(true)
+    try {
+      const detail = await fetchAuthor(author.id)
+      setBio(detail.bio ?? '')
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setBioLoading(false)
+    }
+  }
+  function closeModal() {
+    setModalOpen(false)
+    setBioLoading(false)
+    resetForm()
+  }
+
   const onSuccess = () => {
     // Tên tác giả hiện ở NHIỀU cache khác nhau: dropdown form admin (authors),
     // trang tác giả (author), card sách public (books), chi tiết sách (book),
@@ -39,6 +70,7 @@ export default function AdminAuthorsPage() {
     for (const key of ['authors', 'author', 'books', 'book', 'admin-books', 'admin-book']) {
       queryClient.invalidateQueries({ queryKey: [key] })
     }
+    setModalOpen(false)
     resetForm()
   }
   const onError = (err: unknown) => setError(getApiErrorMessage(err))
@@ -56,20 +88,6 @@ export default function AdminAuthorsPage() {
     onError,
   })
 
-  async function startEdit(author: AuthorOption) {
-    setError('')
-    try {
-      // List chỉ trả id+name (đủ cho dropdown) — bio phải gọi detail mới có.
-      // Lấy bio TRƯỚC rồi mới đổ vào form, tránh ghi đè khi user đã bắt đầu gõ.
-      const detail = await fetchAuthor(author.id)
-      setEditing(author)
-      setName(author.name)
-      setBio(detail.bio ?? '')
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-    }
-  }
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     saveMutation.mutate({ name: name.trim(), bio: bio.trim() || undefined })
@@ -78,72 +96,99 @@ export default function AdminAuthorsPage() {
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body space-y-4">
-        <h1 className="card-title font-serif">Quản lý tác giả</h1>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="card-title font-serif">Quản lý tác giả</h1>
+          <button className="btn btn-primary btn-sm" onClick={openCreate}>
+            + Thêm tác giả
+          </button>
+        </div>
 
-        {error && <div className="alert alert-error text-sm">{error}</div>}
+        {error && !modalOpen && <div className="alert alert-error text-sm">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+        {isPending && <span className="loading loading-spinner" />}
+
+        <div className="overflow-x-auto">
+          <table className="table table-sm">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tên</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {authors?.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.id}</td>
+                  <td className="font-medium">{a.name}</td>
+                  <td className="whitespace-nowrap">
+                    <button className="link link-primary mr-3" onClick={() => openEdit(a)}>
+                      Sửa
+                    </button>
+                    <button
+                      className="link link-error"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => {
+                        // Backend chặn xóa tác giả còn sách — lỗi sẽ hiện qua alert phía trên
+                        if (window.confirm(`Xóa tác giả "${a.name}"?`)) deleteMutation.mutate(a.id)
+                      }}
+                    >
+                      Xóa
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <AdminModal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editing ? `Sửa tác giả: ${editing.name}` : 'Thêm tác giả'}
+      >
+        {error && <div className="alert alert-error text-sm mb-3">{error}</div>}
+        <form onSubmit={handleSubmit} className="space-y-3">
           <label className="form-control">
-            <span className="label-text mb-1">{editing ? `Sửa: ${editing.name}` : 'Thêm tác giả'}</span>
+            <span className="label-text mb-1">Tên tác giả</span>
             <input
-              className="input input-bordered input-sm w-48"
+              className="input input-bordered w-full"
               placeholder="Tên tác giả"
               required
+              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <input
-            className="input input-bordered input-sm w-64"
-            placeholder="Tiểu sử (không bắt buộc)"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-          />
-          <button type="submit" className="btn btn-primary btn-sm" disabled={saveMutation.isPending}>
-            {editing ? 'Lưu' : 'Thêm'}
-          </button>
-          {editing && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={resetForm}>
+          <label className="form-control">
+            <span className="label-text mb-1">
+              Tiểu sử (không bắt buộc)
+              {bioLoading && <span className="loading loading-spinner loading-xs ml-2 align-middle" />}
+            </span>
+            <textarea
+              className="textarea textarea-bordered w-full"
+              rows={4}
+              placeholder={bioLoading ? 'Đang tải tiểu sử...' : 'Vài dòng về tác giả'}
+              disabled={bioLoading}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+            />
+          </label>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={closeModal}>
               Hủy
             </button>
-          )}
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm"
+              disabled={saveMutation.isPending || bioLoading}
+            >
+              {editing ? 'Lưu' : 'Thêm'}
+            </button>
+          </div>
         </form>
-
-        {isPending && <span className="loading loading-spinner" />}
-
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Tên</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {authors?.map((a) => (
-              <tr key={a.id}>
-                <td>{a.id}</td>
-                <td className="font-medium">{a.name}</td>
-                <td className="whitespace-nowrap">
-                  <button className="link link-primary mr-3" onClick={() => startEdit(a)}>
-                    Sửa
-                  </button>
-                  <button
-                    className="link link-error"
-                    disabled={deleteMutation.isPending}
-                    onClick={() => {
-                      // Backend chặn xóa tác giả còn sách — lỗi sẽ hiện qua alert phía trên
-                      if (window.confirm(`Xóa tác giả "${a.name}"?`)) deleteMutation.mutate(a.id)
-                    }}
-                  >
-                    Xóa
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      </AdminModal>
     </div>
   )
 }

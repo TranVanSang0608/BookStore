@@ -11,6 +11,7 @@ import {
   type Voucher,
   type VoucherFormInput,
 } from '../../api/vouchers'
+import AdminModal from '../../components/AdminModal'
 import { formatPrice } from '../../lib/format'
 
 // Form giữ mọi field dạng STRING (input HTML trả string); đổi sang số khi build payload.
@@ -28,6 +29,7 @@ const EMPTY = {
 
 export default function AdminVouchersPage() {
   const [editing, setEditing] = useState<Voucher | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState('')
   const queryClient = useQueryClient()
@@ -51,6 +53,7 @@ export default function AdminVouchersPage() {
       editing === null ? createVoucherApi(payload) : updateVoucherApi(editing.id, payload),
     onSuccess: () => {
       invalidate()
+      setModalOpen(false)
       resetForm()
     },
     onError,
@@ -69,7 +72,11 @@ export default function AdminVouchersPage() {
     setForm((prev) => ({ ...prev, [k]: v }))
   }
 
-  function startEdit(v: Voucher) {
+  function openCreate() {
+    resetForm()
+    setModalOpen(true)
+  }
+  function openEdit(v: Voucher) {
     setEditing(v)
     setForm({
       code: v.code,
@@ -83,6 +90,11 @@ export default function AdminVouchersPage() {
       is_active: v.is_active,
     })
     setError('')
+    setModalOpen(true)
+  }
+  function closeModal() {
+    setModalOpen(false)
+    resetForm()
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -112,116 +124,14 @@ export default function AdminVouchersPage() {
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body space-y-4">
-        <h1 className="card-title font-serif">Quản lý mã giảm giá</h1>
-
-        {error && <div className="alert alert-error text-sm">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
-          <label className="form-control">
-            <span className="label-text mb-1">{editing ? `Sửa: ${editing.code}` : 'Mã'}</span>
-            <input
-              className="input input-bordered input-sm w-36"
-              placeholder="VD: WELCOME10"
-              required
-              value={form.code}
-              onChange={(e) => setField('code', e.target.value)}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1">Loại</span>
-            <select
-              className="select select-bordered select-sm w-32"
-              value={form.discount_type}
-              onChange={(e) => setField('discount_type', e.target.value as DiscountType)}
-            >
-              <option value="percentage">Phần trăm</option>
-              <option value="fixed">Số tiền</option>
-            </select>
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1">{form.discount_type === 'percentage' ? 'Giảm (%)' : 'Giảm (đ)'}</span>
-            <input
-              className="input input-bordered input-sm w-24"
-              type="number"
-              required
-              value={form.discount_value}
-              onChange={(e) => setField('discount_value', e.target.value)}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1">Đơn tối thiểu (đ)</span>
-            <input
-              className="input input-bordered input-sm w-28"
-              type="number"
-              value={form.min_order}
-              onChange={(e) => setField('min_order', e.target.value)}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1">Trần giảm (đ)</span>
-            <input
-              className="input input-bordered input-sm w-28"
-              type="number"
-              placeholder="—"
-              value={form.max_discount}
-              onChange={(e) => setField('max_discount', e.target.value)}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1">Hết hạn</span>
-            <input
-              className="input input-bordered input-sm w-36"
-              type="date"
-              value={form.expire_at}
-              onChange={(e) => setField('expire_at', e.target.value)}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1">Tổng lượt</span>
-            <input
-              className="input input-bordered input-sm w-24"
-              type="number"
-              placeholder="∞"
-              value={form.usage_limit}
-              onChange={(e) => setField('usage_limit', e.target.value)}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1">Lượt/user</span>
-            <input
-              className="input input-bordered input-sm w-20"
-              type="number"
-              value={form.per_user_limit}
-              onChange={(e) => setField('per_user_limit', e.target.value)}
-            />
-          </label>
-
-          <label className="label cursor-pointer gap-2">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-sm"
-              checked={form.is_active}
-              onChange={(e) => setField('is_active', e.target.checked)}
-            />
-            <span className="label-text">Đang bật</span>
-          </label>
-
-          <button type="submit" className="btn btn-primary btn-sm" disabled={saveMutation.isPending}>
-            {editing ? 'Lưu' : 'Thêm'}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="card-title font-serif">Quản lý mã giảm giá</h1>
+          <button className="btn btn-primary btn-sm" onClick={openCreate}>
+            + Thêm mã
           </button>
-          {editing && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={resetForm}>
-              Hủy
-            </button>
-          )}
-        </form>
+        </div>
+
+        {error && !modalOpen && <div className="alert alert-error text-sm">{error}</div>}
 
         {isPending && <span className="loading loading-spinner" />}
 
@@ -241,12 +151,8 @@ export default function AdminVouchersPage() {
             </thead>
             <tbody>
               {vouchers?.map((v) => (
-                // Cả dòng bấm được để đổ mã vào form sửa ở trên; các nút thao tác chặn nổi bọt
-                <tr
-                  key={v.id}
-                  className="hover cursor-pointer"
-                  onClick={() => startEdit(v)}
-                >
+                // Cả dòng bấm được để mở modal sửa; các nút thao tác chặn nổi bọt
+                <tr key={v.id} className="hover cursor-pointer" onClick={() => openEdit(v)}>
                   <td className="font-mono font-medium">{v.code}</td>
                   <td>{discountLabel(v)}</td>
                   <td>{v.min_order > 0 ? formatPrice(v.min_order) : '—'}</td>
@@ -272,7 +178,7 @@ export default function AdminVouchersPage() {
                       className="link link-primary mr-3"
                       onClick={(e) => {
                         e.stopPropagation()
-                        startEdit(v)
+                        openEdit(v)
                       }}
                     >
                       Sửa
@@ -294,6 +200,122 @@ export default function AdminVouchersPage() {
           </table>
         </div>
       </div>
+
+      <AdminModal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editing ? `Sửa mã: ${editing.code}` : 'Thêm mã giảm giá'}
+        className="max-w-2xl"
+      >
+        {error && <div className="alert alert-error text-sm mb-3">{error}</div>}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="form-control sm:col-span-2">
+            <span className="label-text mb-1">Mã</span>
+            <input
+              className="input input-bordered w-full"
+              placeholder="VD: WELCOME10"
+              required
+              autoFocus
+              value={form.code}
+              onChange={(e) => setField('code', e.target.value)}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text mb-1">Loại giảm</span>
+            <select
+              className="select select-bordered w-full"
+              value={form.discount_type}
+              onChange={(e) => setField('discount_type', e.target.value as DiscountType)}
+            >
+              <option value="percentage">Phần trăm</option>
+              <option value="fixed">Số tiền</option>
+            </select>
+          </label>
+
+          <label className="form-control">
+            <span className="label-text mb-1">{form.discount_type === 'percentage' ? 'Giảm (%)' : 'Giảm (đ)'}</span>
+            <input
+              className="input input-bordered w-full"
+              type="number"
+              required
+              value={form.discount_value}
+              onChange={(e) => setField('discount_value', e.target.value)}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text mb-1">Đơn tối thiểu (đ)</span>
+            <input
+              className="input input-bordered w-full"
+              type="number"
+              value={form.min_order}
+              onChange={(e) => setField('min_order', e.target.value)}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text mb-1">Trần giảm (đ)</span>
+            <input
+              className="input input-bordered w-full"
+              type="number"
+              placeholder="Không giới hạn"
+              value={form.max_discount}
+              onChange={(e) => setField('max_discount', e.target.value)}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text mb-1">Hết hạn</span>
+            <input
+              className="input input-bordered w-full"
+              type="date"
+              value={form.expire_at}
+              onChange={(e) => setField('expire_at', e.target.value)}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text mb-1">Tổng lượt (trống = ∞)</span>
+            <input
+              className="input input-bordered w-full"
+              type="number"
+              placeholder="∞"
+              value={form.usage_limit}
+              onChange={(e) => setField('usage_limit', e.target.value)}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text mb-1">Lượt / user</span>
+            <input
+              className="input input-bordered w-full"
+              type="number"
+              value={form.per_user_limit}
+              onChange={(e) => setField('per_user_limit', e.target.value)}
+            />
+          </label>
+
+          <label className="label cursor-pointer gap-2 sm:col-span-2 justify-start">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-sm"
+              checked={form.is_active}
+              onChange={(e) => setField('is_active', e.target.checked)}
+            />
+            <span className="label-text">Đang bật</span>
+          </label>
+
+          <div className="flex justify-end gap-2 pt-2 sm:col-span-2">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={closeModal}>
+              Hủy
+            </button>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={saveMutation.isPending}>
+              {editing ? 'Lưu' : 'Thêm'}
+            </button>
+          </div>
+        </form>
+      </AdminModal>
     </div>
   )
 }
