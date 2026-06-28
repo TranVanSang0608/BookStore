@@ -7,6 +7,19 @@ export const updateShippingZoneSchema = z.object({
   free_threshold: z.number().int().positive('Ngưỡng miễn phí phải lớn hơn 0').nullable(),
 });
 
+// Lưu hàng loạt: mảng tỉnh + phí/ngưỡng. province_code để biết tỉnh nào.
+export const updateShippingZonesBatchSchema = z.object({
+  zones: z
+    .array(
+      z.object({
+        province_code: z.string().min(1),
+        fee: z.number().int().nonnegative('Phí ship phải >= 0'),
+        free_threshold: z.number().int().positive('Ngưỡng miễn phí phải > 0').nullable(),
+      }),
+    )
+    .min(1, 'Không có thay đổi nào để lưu'),
+});
+
 // Cấu hình kho + công thức phí theo khoảng cách (D62). FE ép kiểu number trước khi gửi.
 export const updateShippingConfigSchema = z.object({
   warehouse_lat: z.number().min(-90).max(90),

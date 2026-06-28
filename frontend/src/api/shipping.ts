@@ -49,6 +49,13 @@ export async function updateShippingZoneApi(
   await apiClient.put(`/shipping/admin/zones/${provinceCode}`, input)
 }
 
+// Lưu hàng loạt nhiều tỉnh (nút "Lưu tất cả")
+export async function updateShippingZonesBatchApi(
+  zones: (ShippingZoneInput & { province_code: string })[],
+): Promise<void> {
+  await apiClient.put('/shipping/admin/zones', { zones })
+}
+
 // ---------- Cấu hình kho + công thức phí theo khoảng cách (D62) ----------
 
 export interface ShippingConfig {

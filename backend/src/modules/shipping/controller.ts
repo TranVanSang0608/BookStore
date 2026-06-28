@@ -30,6 +30,11 @@ export async function adminUpdateZone(req: Request, res: Response) {
   res.json({ success: true, data: zone });
 }
 
+// Lưu hàng loạt nhiều tỉnh (nút "Lưu tất cả")
+export async function adminUpdateZonesBatch(req: Request, res: Response) {
+  res.json({ success: true, data: await shippingService.updateShippingZonesBatch(req.body.zones) });
+}
+
 // Cấu hình kho + công thức phí theo khoảng cách (D62)
 export async function adminGetConfig(_req: Request, res: Response) {
   res.json({ success: true, data: await shippingService.getAdminShippingConfig() });

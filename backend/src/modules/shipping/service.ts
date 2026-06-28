@@ -156,3 +156,18 @@ export async function updateShippingZone(
     data: { fee: data.fee, free_threshold: data.free_threshold },
   });
 }
+
+// Lưu HÀNG LOẠT nhiều tỉnh trong 1 transaction (cho nút "Lưu tất cả" — admin sửa nhiều dòng rồi lưu 1 lần).
+export async function updateShippingZonesBatch(
+  items: { province_code: string; fee: number; free_threshold: number | null }[],
+) {
+  await prisma.$transaction(
+    items.map((it) =>
+      prisma.shippingZone.update({
+        where: { province_code: it.province_code },
+        data: { fee: it.fee, free_threshold: it.free_threshold },
+      }),
+    ),
+  );
+  return { updated: items.length };
+}

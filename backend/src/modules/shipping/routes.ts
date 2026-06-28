@@ -3,7 +3,11 @@ import { adminOnly } from '../../middleware/adminOnly';
 import { auth } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import * as controller from './controller';
-import { updateShippingConfigSchema, updateShippingZoneSchema } from './schemas';
+import {
+  updateShippingConfigSchema,
+  updateShippingZoneSchema,
+  updateShippingZonesBatchSchema,
+} from './schemas';
 
 const router = Router();
 
@@ -13,6 +17,14 @@ router.get('/fee', controller.getFee);
 
 // Admin: xem + sửa bảng phí ship theo tỉnh (auth + adminOnly)
 router.get('/admin/zones', auth, adminOnly, controller.adminListZones);
+// Lưu hàng loạt — đặt TRƯỚC route có :provinceCode để không bị nuốt nhầm
+router.put(
+  '/admin/zones',
+  auth,
+  adminOnly,
+  validate(updateShippingZonesBatchSchema),
+  controller.adminUpdateZonesBatch,
+);
 router.put(
   '/admin/zones/:provinceCode',
   auth,
