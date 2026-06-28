@@ -240,6 +240,9 @@ model Order {
   discount_amount Int @default(0)
   total           Int
 
+  // Snapshot khoảng cách ước lượng (km) dùng để tính phí ship lúc đặt (D62); null nếu dùng zone cũ
+  shipping_distance_km Float?
+
   // Snapshot voucher (Phase 7): lưu code + discount_amount ở trên; voucher_id FK chỉ để
   // analytics, KHÔNG đọc lại từ đó khi hiển thị đơn cũ (đơn cũ đọc voucher_code snapshot — D25/D54)
   voucher_code String?
@@ -311,11 +314,30 @@ model Payment {
 // ---------- ShippingZone ----------
 
 // Bảng config: phí ship theo tỉnh + ngưỡng free ship
+// fee + free_threshold = mô hình CŨ (zone cố định), giữ làm FALLBACK (D62).
+// distance_km = khoảng cách ƯỚC LƯỢNG kho→tâm tỉnh (tính 1 lần), dùng ở chế độ tính-theo-km.
 model ShippingZone {
   id             Int    @id @default(autoincrement())
   province_code  String @unique
-  fee            Int // VND
-  free_threshold Int? // đơn từ ngưỡng này trở lên free ship; null = không áp dụng free ship
+  fee            Int // VND — phí cố định (fallback)
+  free_threshold Int? // ngưỡng free ship CHẾ ĐỘ FALLBACK; null = không áp dụng free ship
+  distance_km    Float? // km ước lượng kho→tỉnh (D62); null → dùng fee fallback
+}
+
+// Cấu hình tính phí ship theo khoảng cách (D62) — SINGLETON (chỉ 1 dòng, id cố định = 1).
+// enabled=false → toàn hệ thống dùng ShippingZone.fee cũ (an toàn khi chưa cấu hình xong).
+model ShippingConfig {
+  id             Int      @id @default(1)
+  warehouse_lat  Float // tọa độ kho (admin đặt)
+  warehouse_lng  Float
+  base_fee       Int // phí nền cho free_km đầu (VND)
+  per_km_fee     Int // phí mỗi km vượt free_km (VND/km) — nhỏ cho toàn quốc
+  free_km        Int // số km đầu đã gồm trong base_fee
+  free_threshold Int? // ngưỡng free ship CHẾ ĐỘ KHOẢNG CÁCH (global); null = không áp dụng
+  max_fee        Int? // TRẦN phí (bắt buộc thực tế để chặn HN↔HCM phi lý)
+  road_factor    Float    @default(1.3) // hệ số đổi đường-chim-bay → đường bộ
+  enabled        Boolean  @default(false) // bật chế độ tính theo km
+  updated_at     DateTime @updatedAt
 }
 
 // ---------- SiteSetting (cấu hình thông tin shop — admin sửa được) ----------
