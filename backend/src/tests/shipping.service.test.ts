@@ -1,17 +1,23 @@
 // Unit test cho shipping service (D62): 2 chế độ — KHOẢNG CÁCH và FALLBACK (zone cố định).
 // calcShippingFee là nguồn sự thật duy nhất (createOrder tái dùng) nên test kỹ cả 2 nhánh.
 import { prisma } from '../lib/prisma';
-import { calcShippingFee, recomputeZoneDistances } from '../modules/shipping/service';
+import {
+  calcShippingFee,
+  getAdminShippingConfig,
+  recomputeZoneDistances,
+  upsertShippingConfig,
+} from '../modules/shipping/service';
 
 jest.mock('../lib/prisma', () => ({
   prisma: {
     shippingZone: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
-    shippingConfig: { findUnique: jest.fn() },
+    shippingConfig: { findUnique: jest.fn(), upsert: jest.fn() },
   },
 }));
 
 const zoneFind = prisma.shippingZone.findUnique as jest.Mock;
 const configFind = prisma.shippingConfig.findUnique as jest.Mock;
+const configUpsert = prisma.shippingConfig.upsert as jest.Mock;
 const zoneFindMany = prisma.shippingZone.findMany as jest.Mock;
 const zoneUpdate = prisma.shippingZone.update as jest.Mock;
 
@@ -104,6 +110,41 @@ describe('calcShippingFee — FALLBACK (zone cố định, giữ hành vi cũ)',
     zoneFind.mockResolvedValue(null);
     configFind.mockResolvedValue(null);
     await expect(calcShippingFee('99', 100_000)).rejects.toMatchObject({ statusCode: 400 });
+  });
+});
+
+describe('cấu hình kho (admin)', () => {
+  it('getAdminShippingConfig: chưa có config → trả mặc định (enabled=false)', async () => {
+    configFind.mockResolvedValue(null);
+    const c = await getAdminShippingConfig();
+    expect(c.enabled).toBe(false);
+    expect(c.warehouse_lat).toBeGreaterThan(0);
+    expect(c.max_fee).not.toBeNull(); // mặc định có trần
+  });
+
+  it('upsertShippingConfig: lưu config RỒI tính lại distance 34 tỉnh', async () => {
+    configUpsert.mockResolvedValue(config); // config đã có id:1
+    configFind.mockResolvedValue(config); // recompute đọc lại config
+    zoneFindMany.mockResolvedValue([
+      { id: 1, province_code: '79' },
+      { id: 2, province_code: '1' },
+    ]);
+    zoneUpdate.mockResolvedValue({});
+
+    const r = await upsertShippingConfig({
+      warehouse_lat: 10.8231,
+      warehouse_lng: 106.6297,
+      base_fee: 15_000,
+      per_km_fee: 80,
+      free_km: 10,
+      free_threshold: 300_000,
+      max_fee: 50_000,
+      road_factor: 1.3,
+      enabled: true,
+    });
+
+    expect(configUpsert).toHaveBeenCalledTimes(1);
+    expect(r.updated).toBe(2); // recompute chạy sau khi lưu
   });
 });
 

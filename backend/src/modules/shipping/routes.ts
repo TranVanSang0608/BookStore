@@ -3,7 +3,7 @@ import { adminOnly } from '../../middleware/adminOnly';
 import { auth } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import * as controller from './controller';
-import { updateShippingZoneSchema } from './schemas';
+import { updateShippingConfigSchema, updateShippingZoneSchema } from './schemas';
 
 const router = Router();
 
@@ -19,6 +19,16 @@ router.put(
   adminOnly,
   validate(updateShippingZoneSchema),
   controller.adminUpdateZone,
+);
+
+// Admin: cấu hình kho + công thức phí theo khoảng cách (D62)
+router.get('/admin/config', auth, adminOnly, controller.adminGetConfig);
+router.put(
+  '/admin/config',
+  auth,
+  adminOnly,
+  validate(updateShippingConfigSchema),
+  controller.adminUpdateConfig,
 );
 
 export default router;

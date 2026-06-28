@@ -29,3 +29,13 @@ export async function adminUpdateZone(req: Request, res: Response) {
   const zone = await shippingService.updateShippingZone(String(req.params.provinceCode), req.body);
   res.json({ success: true, data: zone });
 }
+
+// Cấu hình kho + công thức phí theo khoảng cách (D62)
+export async function adminGetConfig(_req: Request, res: Response) {
+  res.json({ success: true, data: await shippingService.getAdminShippingConfig() });
+}
+
+export async function adminUpdateConfig(req: Request, res: Response) {
+  // Lưu config xong tự tính lại distance_km cho 34 tỉnh
+  res.json({ success: true, data: await shippingService.upsertShippingConfig(req.body) });
+}

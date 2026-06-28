@@ -79,9 +79,10 @@ export async function recomputeZoneDistances() {
 // Danh sách phí ship 34 tỉnh kèm TÊN tỉnh để admin dễ tra. ShippingZone không có FK tới
 // Province (chỉ lưu province_code) nên nạp Province riêng rồi ghép tên. Sắp theo tên tỉnh.
 export async function listShippingZones() {
-  const [zones, provinces] = await Promise.all([
+  const [zones, provinces, config] = await Promise.all([
     prisma.shippingZone.findMany(),
     prisma.province.findMany(),
+    getShippingConfig(),
   ]);
   const nameByCode = new Map(provinces.map((p) => [p.code, p.name]));
 
@@ -92,8 +93,54 @@ export async function listShippingZones() {
       fee: z.fee,
       free_threshold: z.free_threshold,
       distance_km: z.distance_km, // null nếu chưa tính (D62)
+      // Phí ước tính theo km cho ĐƠN NHỎ (subtotal=0, chưa miễn phí) — để admin xem trước.
+      // Chỉ tính khi đã cấu hình + tỉnh có distance_km; null nếu chưa.
+      distance_fee:
+        config && z.distance_km != null
+          ? calcDistanceFee(z.distance_km, 0, {
+              base_fee: config.base_fee,
+              per_km_fee: config.per_km_fee,
+              free_km: config.free_km,
+              free_threshold: config.free_threshold,
+              max_fee: config.max_fee,
+            })
+          : null,
     }))
     .sort((a, b) => a.province_name.localeCompare(b.province_name, 'vi'));
+}
+
+// ---------- Admin: cấu hình kho + công thức (D62) ----------
+
+// Mặc định khi CHƯA có cấu hình — để form admin có sẵn giá trị hợp lý (kho TP.HCM, công thức
+// đã chốt cho phạm vi toàn quốc: per_km nhỏ + trần bắt buộc). enabled=false → vẫn dùng zone cũ.
+const DEFAULT_CONFIG = {
+  warehouse_lat: 10.8231,
+  warehouse_lng: 106.6297,
+  base_fee: 15_000,
+  per_km_fee: 80,
+  free_km: 10,
+  free_threshold: 300_000 as number | null,
+  max_fee: 50_000 as number | null,
+  road_factor: 1.3,
+  enabled: false,
+};
+
+export async function getAdminShippingConfig() {
+  const config = await getShippingConfig();
+  return config ?? { id: 1, ...DEFAULT_CONFIG, updated_at: null };
+}
+
+type ShippingConfigInput = Omit<typeof DEFAULT_CONFIG, never>;
+
+// Lưu cấu hình (upsert singleton id=1) RỒI tính lại distance_km cho 34 tỉnh ngay.
+export async function upsertShippingConfig(data: ShippingConfigInput) {
+  const config = await prisma.shippingConfig.upsert({
+    where: { id: 1 },
+    create: { id: 1, ...data },
+    update: { ...data },
+  });
+  const recompute = await recomputeZoneDistances();
+  return { config, ...recompute };
 }
 
 // Sửa phí + ngưỡng free ship của 1 tỉnh. Không tồn tại → 404 (không tạo mới tỉnh lạ).
