@@ -259,7 +259,16 @@ export default function CheckoutPage() {
                 </div>
               )}
               <div className="flex justify-between">
-                <span>Phí vận chuyển{selected ? ` (${selected.province_name})` : ''}</span>
+                <span>
+                  Phí vận chuyển
+                  {selected && (
+                    <span className="text-base-content/60">
+                      {' '}
+                      ({selected.province_name}
+                      {fee?.distance_km != null ? ` · ~${fee.distance_km} km` : ''})
+                    </span>
+                  )}
+                </span>
                 <span>
                   {!selected && '—'}
                   {selected && feePending && <span className="loading loading-spinner loading-xs" />}

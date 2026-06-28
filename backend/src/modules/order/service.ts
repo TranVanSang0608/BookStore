@@ -50,9 +50,10 @@ export async function createOrder(userId: number, input: CreateOrderInput) {
   const address = await prisma.address.findFirst({ where: { id: input.address_id, user_id: userId } });
   if (!address) throw new AppError(404, 'Không tìm thấy địa chỉ giao hàng');
 
-  // Tiền tính HOÀN TOÀN ở server (D40): subtotal từ giá DB, ship từ calcShippingFee — không tin client
+  // Tiền tính HOÀN TOÀN ở server (D40): subtotal từ giá DB, ship từ calcShippingFee — không tin client.
+  // distance_km: khoảng cách ước lượng (chế độ km) để SNAPSHOT vào đơn; null nếu dùng phí vùng (D62).
   const subtotal = cart.items.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
-  const { shipping_fee } = await calcShippingFee(address.province_code, subtotal);
+  const { shipping_fee, distance_km } = await calcShippingFee(address.province_code, subtotal);
 
   // Voucher (Phase 7): validate NGOÀI transaction để báo lỗi thân thiện (mã sai/hết hạn/đơn
   // tối thiểu...). discount tính từ subtotal SERVER, KHÔNG tin client. Việc "giữ lượt" atomic
@@ -77,6 +78,7 @@ export async function createOrder(userId: number, input: CreateOrderInput) {
             user_id: userId,
             subtotal,
             shipping_fee,
+            shipping_distance_km: distance_km, // snapshot khoảng cách ước lượng (D62)
             discount_amount: discount,
             total,
             note: input.note,

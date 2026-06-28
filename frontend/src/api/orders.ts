@@ -27,6 +27,7 @@ export interface OrderDetail {
   status: OrderStatus
   subtotal: number
   shipping_fee: number
+  shipping_distance_km: number | null // km ước lượng đã snapshot (D62); null nếu dùng phí vùng
   discount_amount: number
   total: number
   note: string | null

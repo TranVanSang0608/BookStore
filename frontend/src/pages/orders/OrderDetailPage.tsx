@@ -148,7 +148,12 @@ export default function OrderDetailPage() {
               <span>{formatPrice(order.subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>Phí vận chuyển</span>
+              <span>
+                Phí vận chuyển
+                {order.shipping_distance_km != null && (
+                  <span className="text-base-content/60"> (~{order.shipping_distance_km} km)</span>
+                )}
+              </span>
               <span>{order.shipping_fee === 0 ? 'Miễn phí' : formatPrice(order.shipping_fee)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg">
