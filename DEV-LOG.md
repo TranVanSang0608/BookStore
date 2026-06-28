@@ -840,4 +840,51 @@ tài khoản OAuth; dashboard chỉ ĐỌC dữ liệu sẵn có.
 
 ---
 
+## Feature — Phí ship theo khoảng cách ước lượng (D62) (2026-06-28, nhánh `feat/shipping-by-distance`)
+
+### Mục tiêu
+
+Nâng phí ship từ **zone cố định** (mỗi tỉnh 1 phí phẳng) lên **ước lượng theo khoảng cách**: admin
+cấu hình **vị trí kho + công thức**, hệ thống tính khoảng cách kho→tỉnh nhận → phí theo km. **Giữ
+fallback** zone cũ để không bao giờ vỡ checkout. KHÔNG tích hợp hãng vận chuyển / Maps realtime →
+đây là **ước lượng theo tỉnh** (Haversine + tâm tỉnh + hệ số đường bộ), không phải khoảng cách giao
+thật. Quyết định: **D62**.
+
+### Đã làm (Phase 0–4)
+
+| Phase | Nội dung |
+|---|---|
+| 0 | Decision D62 (THIET-KE.md); chốt công thức mặc định (per_km nhỏ + **max_fee bắt buộc**), nguồn tọa độ, quy tắc free_threshold |
+| 1 | `vn-provinces-latlng.json` (tọa độ 34 tỉnh) · `lib/geo.ts` haversine · schema `ShippingZone +distance_km` / `ShippingConfig` (singleton) / `Order +shipping_distance_km` · migration **`--create-only`** |
+| 2 | `calcShippingFee` 2 chế độ (khoảng cách / fallback) · `recomputeZoneDistances` · `getShippingConfig` |
+| 3 | Admin `GET/PUT /shipping/admin/config` (lưu xong tự recompute) · AdminShippingPage: form kho + công thức + công tắc + cột km/phí |
+| 4 | createOrder snapshot `shipping_distance_km` · Checkout + OrderDetail hiện "~X km" |
+
+**263 unit test BE xanh, FE build + lint xanh.**
+
+### Khái niệm cần hiểu để bảo vệ
+
+1. **1 hàm là nguồn sự thật (D40 giữ nguyên)** — chỉ đổi BÊN TRONG `calcShippingFee`; preview checkout
+   + createOrder tự hưởng. 2 chế độ chọn theo `ShippingConfig.enabled` + tỉnh có `distance_km` chưa.
+2. **Ước lượng theo tỉnh, KHÔNG phải khoảng cách thật** — Haversine(kho, TÂM tỉnh) × `road_factor`
+   (~1.3 xấp xỉ đường bộ). Không gọi Maps/hãng lúc khách đặt → robust, 0 chi phí runtime; tính 1 lần
+   lưu `ShippingZone.distance_km` khi admin đổi kho.
+3. **max_fee bắt buộc** — phí tuyến tính theo km sẽ phi lý cho HN↔HCM (>1000km); trần chặn lại.
+   `per_km_fee` nhỏ (~80đ) cho phạm vi toàn quốc.
+4. **free_threshold 1 nguồn/chế độ** — chế độ km dùng GLOBAL `ShippingConfig.free_threshold`; fallback
+   dùng per-tỉnh `ShippingZone.free_threshold` cũ (tránh "2 chỗ miễn phí").
+5. **Fallback an toàn** — `enabled=false` / thiếu `distance_km` / chưa cấu hình → tự dùng `zone.fee` cũ
+   → checkout không bao giờ vỡ. Mặc định `enabled=false` nên merge vào không đổi hành vi hiện tại.
+6. **SNAPSHOT (D25)** — đơn lưu `shipping_distance_km` lúc đặt; đổi công thức sau không ảnh hưởng đơn cũ.
+
+### Việc còn treo (Phase 5 — go-live)
+
+- Migration đang **create-only** (chưa áp DB). Merge `main` → Render `migrate deploy` áp cột nullable
+  + bảng mới (additive, an toàn). Vì `enabled=false` mặc định → demo chạy y như cũ tới khi admin bật.
+- Sau merge: admin vào `/admin/shipping` đặt kho + bật chế độ → test end-to-end (checkout hiện km).
+- Tọa độ tỉnh là **ước lượng tâm hành chính**; muốn chính xác hơn → nâng lên gọi Maps 1 lần (đã tách
+  hàm nên dễ đổi) — NICE.
+
+---
+
 *(Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*
