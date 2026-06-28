@@ -117,7 +117,7 @@ const DEFAULT_CONFIG = {
   warehouse_lat: 10.8231,
   warehouse_lng: 106.6297,
   base_fee: 15_000,
-  per_km_fee: 80,
+  per_km_fee: 25, // nhỏ cho phạm vi toàn quốc (per_km lớn sẽ chạm trần quá sớm → mọi tỉnh xa bằng nhau)
   free_km: 10,
   free_threshold: 300_000 as number | null,
   max_fee: 50_000 as number | null,

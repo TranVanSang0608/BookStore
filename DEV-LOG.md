@@ -870,7 +870,7 @@ thật. Quyết định: **D62**.
    (~1.3 xấp xỉ đường bộ). Không gọi Maps/hãng lúc khách đặt → robust, 0 chi phí runtime; tính 1 lần
    lưu `ShippingZone.distance_km` khi admin đổi kho.
 3. **max_fee bắt buộc** — phí tuyến tính theo km sẽ phi lý cho HN↔HCM (>1000km); trần chặn lại.
-   `per_km_fee` nhỏ (~80đ) cho phạm vi toàn quốc.
+   `per_km_fee` nhỏ (~25đ) cho phạm vi toàn quốc (test sống: per_km lớn chạm trần quá sớm → tỉnh xa bằng nhau).
 4. **free_threshold 1 nguồn/chế độ** — chế độ km dùng GLOBAL `ShippingConfig.free_threshold`; fallback
    dùng per-tỉnh `ShippingZone.free_threshold` cũ (tránh "2 chỗ miễn phí").
 5. **Fallback an toàn** — `enabled=false` / thiếu `distance_km` / chưa cấu hình → tự dùng `zone.fee` cũ
