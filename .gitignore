@@ -38,3 +38,6 @@ BookStore giao diện hoàn chỉnh/
 
 # Ảnh thử upload ở local (ảnh thật lưu trên Cloudinary)
 backend/covers/
+
+# Ảnh hero GỐC (PNG 1.8MB) — chỉ commit bản nén public/hero.webp, giữ gốc ở local
+frontend/hero.png
