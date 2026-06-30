@@ -28,6 +28,7 @@ import CheckoutPage from '../pages/checkout/CheckoutPage'
 import OrderDetailPage from '../pages/orders/OrderDetailPage'
 import OrdersPage from '../pages/orders/OrdersPage'
 import HomePage from '../pages/home/HomePage'
+import NotFoundPage from '../pages/NotFoundPage'
 import TermsPage from '../pages/legal/TermsPage'
 import PrivacyPage from '../pages/legal/PrivacyPage'
 import ProfilePage from '../pages/profile/ProfilePage'
@@ -97,6 +98,8 @@ export default function AppRoutes() {
             </RequireAuth>
           }
         />
+        {/* Catch-all: URL lạ trong khu cửa hàng → trang 404 (vẫn có navbar/footer) */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* Khu quản trị: ĐỨNG RIÊNG ngoài <Layout> marketing — AdminLayout tự có
@@ -129,6 +132,8 @@ export default function AppRoutes() {
         <Route path="vouchers" element={<AdminVouchersPage />} />
         <Route path="shipping" element={<AdminShippingPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
+        {/* URL lạ trong khu admin → 404 (render trong AdminLayout) */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   )

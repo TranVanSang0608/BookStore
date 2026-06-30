@@ -78,11 +78,11 @@ export default function BookCard({ book }: { book: BookCardData }) {
           </h3>
         </Link>
         <p className="text-sm text-base-content/70 mt-0.5">{book.author.name}</p>
-        {book.review_count > 0 && (
-          <div className="mt-1">
-            <Stars value={book.avg_rating} count={book.review_count} />
-          </div>
-        )}
+        {/* Luôn chừa dòng sao để mọi card cao bằng nhau; chưa có review thì Stars
+            tự hiện "Chưa có đánh giá" (count = 0) */}
+        <div className="mt-1">
+          <Stars value={book.avg_rating} count={book.review_count} />
+        </div>
         <div className="flex items-center justify-between gap-2 mt-2">
           <span className="font-serif font-bold text-xl text-primary">{formatPrice(book.price)}</span>
           {!soldOut && <QuickAdd book={book} />}

@@ -1,16 +1,29 @@
 import { useMutation } from '@tanstack/react-query'
+import { X } from 'lucide-react'
+import { useState } from 'react'
 import { resendVerificationApi } from '../api/auth'
 import { getApiErrorMessage } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
+
+// Khoá nhớ "đã đóng banner" trong phiên này (sessionStorage = quên khi đóng tab,
+// để lần mở app sau vẫn nhắc lại — tránh user quên xác thực vĩnh viễn).
+const DISMISS_KEY = 'emailBannerDismissed'
 
 // Dải nhắc "email chưa xác thực" — hiện trên mọi trang khi user đã đăng nhập nhưng
 // email_verified = false. Cũng đóng vai trò "nhắc kiểm tra email" ngay sau khi đăng ký.
 export default function EmailVerifyBanner() {
   const { user } = useAuth()
   const mutation = useMutation({ mutationFn: resendVerificationApi })
+  // Đọc 1 lần lúc mount: trong phiên này user đã bấm × chưa?
+  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem(DISMISS_KEY) === '1')
 
-  // Derived hoàn toàn từ user — không cần state/effect: verified hoặc chưa login thì ẩn
-  if (!user || user.email_verified) return null
+  function dismiss() {
+    sessionStorage.setItem(DISMISS_KEY, '1')
+    setDismissed(true)
+  }
+
+  // Ẩn nếu: chưa login, đã xác thực, hoặc user đã chủ động đóng trong phiên
+  if (!user || user.email_verified || dismissed) return null
 
   return (
     <div className="bg-warning/15 border-b border-warning/30">
@@ -31,6 +44,14 @@ export default function EmailVerifyBanner() {
         {mutation.isError && (
           <span className="text-error">{getApiErrorMessage(mutation.error)}</span>
         )}
+        {/* Nút đóng — đẩy sang phải bằng ml-auto */}
+        <button
+          onClick={dismiss}
+          aria-label="Đóng thông báo"
+          className="btn btn-ghost btn-xs btn-circle ml-auto"
+        >
+          <X size={14} />
+        </button>
       </div>
     </div>
   )
