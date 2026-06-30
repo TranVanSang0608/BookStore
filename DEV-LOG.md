@@ -887,4 +887,57 @@ thật. Quyết định: **D62**.
 
 ---
 
-*(Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*
+## 2026-06-30 — UI/UX Polish (Nhóm 1–3, nhánh `feat/ui-ux-polish`)
+
+Bối cảnh: rà soát một bản đánh giá UI/UX độc lập, đối chiếu với code thật. Sửa các điểm
+đúng; bỏ qua/đính chính các điểm chẩn đoán sai — vd "trang đơn hàng bị đen" thực ra do gõ
+**sai URL** (`/profile/orders` không tồn tại; route đúng là `/orders`) + **thiếu trang 404**;
+"thống kê hiện —" là do **DB mất kết nối** (Neon đổi mật khẩu), không phải bug code.
+
+### Đã làm
+
+**Nhóm 1 — quick win**
+- Trang 404 (route catch-all `*`) cho cả cửa hàng lẫn admin — trước đây URL lạ ra màn hình trắng/đen.
+- Banner "email chưa xác thực": thêm nút × đóng trong phiên (`sessionStorage`).
+- `BookCard` luôn chừa dòng sao (mờ "Chưa có đánh giá" khi 0 review) → các card cao đều nhau.
+- Checkout: dòng gợi ý "mua thêm X để miễn phí vận chuyển" dựa trên `free_threshold`.
+
+**Nhóm 2 — dữ liệu**
+- Làm giàu 100 cuốn sách: mô tả nâng lên 2–3 câu; tab "Thông tin" đầy đủ cho MỌI sách
+  (ISBN + ngôn ngữ tự sinh, bổ sung NXB/năm/trang cho 12 cuốn gốc).
+- `seed.ts`: helper `makeIsbn()` sinh ISBN-13 hợp lệ (tiền tố VN 978-604 + chữ số kiểm tra);
+  `upsert` đổi sang **update lại phần nội dung** để re-seed cập nhật được sách đã tồn tại.
+
+**Nhóm 3 — tính năng**
+- `SearchAutocomplete`: ô tìm kiếm có gợi ý (debounce 250ms, ≥2 ký tự), **tái dùng**
+  `GET /api/books?q=...&limit=6` (không cần API mới); dùng chung navbar desktop + mobile.
+- Trang chủ: hero thành 2 cột trên màn lớn + minh họa SVG chồng sách lấp nửa phải.
+
+### File chính
+- FE: `pages/NotFoundPage.tsx` (mới), `routes/index.tsx`, `components/EmailVerifyBanner.tsx`,
+  `features/catalog/BookCard.tsx`, `pages/checkout/CheckoutPage.tsx`,
+  `components/SearchAutocomplete.tsx` (mới), `components/Navbar.tsx`, `pages/home/HomePage.tsx`
+- BE: `prisma/seed.ts`
+
+### Verify
+- BE: `tsc --noEmit` xanh · **263 test** xanh · `prisma db seed` OK (100 sách, idempotent).
+- FE: `tsc -b` + `vite build` xanh.
+- Browser: 404 render đúng; dòng sao đồng nhất; tab Thông tin đủ 5 dòng (NXB/năm/ngôn ngữ/trang/ISBN);
+  autocomplete trả gợi ý ("đắc nhân" → Đắc Nhân Tâm); hero art hiện ở ≥`lg`.
+
+### Khái niệm cần hiểu để bảo vệ
+1. **Route catch-all `*`** — React Router duyệt theo thứ tự; URL không khớp route nào sẽ rơi vào `*`.
+   Trước đây không có nên ra trang rỗng; thêm vào là hết "màn hình đen".
+2. **Autocomplete không cần backend mới** — endpoint danh sách `/api/books` đã hỗ trợ `q` + `limit`;
+   FE chỉ thêm debounce (đợi ngừng gõ mới gọi) để khỏi bắn API mỗi phím.
+3. **ISBN là dữ liệu demo sinh tự động** (đúng định dạng + chữ số kiểm tra), KHÔNG phải ISBN thật của NXB.
+4. **Hero art là SVG thuần** dùng class `fill-*` nên tự đổi màu theo theme sáng/tối; không phụ thuộc
+   ảnh bìa (seed cố ý không seed ảnh — ảnh thật upload qua admin).
+5. **Idempotent + create-only đã nới** — `upsert.update` giờ làm tươi mô tả/thông tin khi re-seed,
+   nhưng KHÔNG đụng giá/tồn kho.
+
+Commits: `e51e13b` (N1) · `51730cc` (N2) · `eb14320` (N3). (CLAUDE.md đã chuyển sang gitignore — `a24a21c`.)
+
+---
+
+*(Phase 10 Deploy: sẽ ghi tiếp tại đây)*
