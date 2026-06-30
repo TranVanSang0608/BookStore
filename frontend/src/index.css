@@ -90,3 +90,11 @@
 body {
   font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Cormorant Garamond mặc định dùng "oldstyle figures" — chữ số cao thấp lệch nhau, vài số
+   (3,4,5,7,9) tụt xuống dưới baseline → mọi số trong font-serif (giá tiền, thống kê...) trông
+   xộc xệch. Ép về "lining figures" (đều chiều cao, nằm trên baseline) + "tabular" (đều bề rộng)
+   để số thẳng hàng. Áp 1 chỗ cho TẤT CẢ số serif — không sót phần nào. */
+.font-serif {
+  font-variant-numeric: lining-nums tabular-nums;
+}

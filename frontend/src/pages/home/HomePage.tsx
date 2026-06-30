@@ -27,15 +27,6 @@ function SectionHead({ eyebrow, title, to }: { eyebrow: string; title: string; t
   )
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <div className="font-serif text-3xl font-bold text-base-content leading-none">{value}</div>
-      <div className="text-xs text-base-content/70 mt-1">{label}</div>
-    </div>
-  )
-}
-
 function ValueProp({ icon, title, desc }: { icon: ReactNode; title: string; desc: string }) {
   return (
     <div className="flex items-center gap-3">
@@ -91,7 +82,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 py-14 md:py-20 grid lg:grid-cols-[1fr_auto] gap-12 items-center">
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-accent border border-accent/30 bg-accent/10 rounded-full px-3 py-1">
-              ★ Hàng nghìn đầu sách chọn lọc
+              ★ Tuyển chọn đầu sách chất lượng
             </span>
             <h1 className="font-serif text-4xl md:text-5xl font-semibold text-base-content leading-tight mt-4">
               Tìm cuốn sách
@@ -133,12 +124,6 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-
-            <div className="flex gap-8 mt-8 pt-6 border-t border-base-300">
-              <Stat value={newBooks ? `${newBooks.total}` : '—'} label="Đầu sách" />
-              <Stat value={categories ? `${categories.length}` : '—'} label="Thể loại" />
-              <Stat value="24h" label="Giao nội thành" />
-            </div>
           </div>
 
           {/* Minh họa chồng sách — lấp khoảng trống nửa phải hero trên màn lớn.

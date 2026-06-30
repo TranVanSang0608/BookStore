@@ -59,23 +59,6 @@ export default function Navbar() {
           <Logo size={32} />
         </Link>
 
-        {/* Menu "Sách" — đổ từ thể loại thật (desktop) */}
-        <div className="dropdown dropdown-bottom hidden md:block">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-sm gap-1 font-semibold">
-            Sách <ChevronDown size={16} />
-          </div>
-          <ul
-            tabIndex={0}
-            className="menu dropdown-content bg-base-100 rounded-box shadow w-56 mt-2 z-40 max-h-96 flex-nowrap overflow-y-auto"
-          >
-            {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).map((c) => (
-              <li key={c.id}>
-                <Link to={`/books?category=${c.slug}`}>{c.name}</Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
         {/* Ô tìm kiếm có gợi ý (desktop) */}
         <SearchAutocomplete className="flex-1 hidden md:block max-w-xl" />
 
@@ -173,7 +156,7 @@ export default function Navbar() {
           >
             Trang chủ
           </NavLink>
-          {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).slice(0, 7).map((c) => (
+          {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).slice(0, 8).map((c) => (
             <Link
               key={c.id}
               to={`/books?category=${c.slug}`}
