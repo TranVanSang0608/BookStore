@@ -23,6 +23,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Hướng dẫn local cho Claude Code (không commit)
+CLAUDE.md
+
 # Báo cáo / tài liệu nộp + artifact local (không thuộc mã nguồn)
 *.docx
 BAO-CAO-*.md
