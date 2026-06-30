@@ -88,7 +88,7 @@ export default function HomePage() {
     <div>
       {/* ===================== HERO ===================== */}
       <section className="bg-base-200 bg-[radial-gradient(circle_at_85%_15%,rgba(178,139,76,0.10),transparent_45%)]">
-        <div className="max-w-6xl mx-auto px-4 py-14 md:py-20">
+        <div className="max-w-6xl mx-auto px-4 py-14 md:py-20 grid lg:grid-cols-[1fr_auto] gap-12 items-center">
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-accent border border-accent/30 bg-accent/10 rounded-full px-3 py-1">
               ★ Hàng nghìn đầu sách chọn lọc
@@ -139,6 +139,42 @@ export default function HomePage() {
               <Stat value={categories ? `${categories.length}` : '—'} label="Thể loại" />
               <Stat value="24h" label="Giao nội thành" />
             </div>
+          </div>
+
+          {/* Minh họa chồng sách — lấp khoảng trống nửa phải hero trên màn lớn.
+              Vẽ bằng SVG + class fill-* nên tự đổi màu theo theme sáng/tối. */}
+          <div className="hidden lg:block">
+            <svg
+              viewBox="0 0 400 400"
+              className="w-[22rem] h-[22rem]"
+              role="img"
+              aria-label="Minh họa chồng sách"
+            >
+              <circle cx="200" cy="205" r="165" className="fill-accent/10" />
+              <circle cx="200" cy="205" r="120" className="fill-accent/10" />
+              {/* sách dưới cùng */}
+              <g transform="rotate(-7 200 285)">
+                <rect x="78" y="262" width="244" height="48" rx="7" className="fill-primary" />
+                <rect x="78" y="262" width="244" height="12" rx="7" className="fill-black/15" />
+                <rect x="96" y="280" width="78" height="9" rx="4" className="fill-base-100/70" />
+              </g>
+              {/* sách giữa */}
+              <g transform="rotate(5 200 230)">
+                <rect x="92" y="214" width="228" height="46" rx="7" className="fill-secondary" />
+                <rect x="92" y="214" width="228" height="12" rx="7" className="fill-black/15" />
+                <rect x="110" y="232" width="64" height="9" rx="4" className="fill-base-100/70" />
+              </g>
+              {/* sách trên cùng */}
+              <g transform="rotate(-4 200 180)">
+                <rect x="84" y="166" width="232" height="46" rx="7" className="fill-accent" />
+                <rect x="84" y="166" width="232" height="12" rx="7" className="fill-black/15" />
+                <rect x="102" y="184" width="88" height="9" rx="4" className="fill-base-100/80" />
+              </g>
+              {/* điểm nhấn trang trí */}
+              <text x="296" y="128" fontSize="30" className="fill-secondary">★</text>
+              <circle cx="116" cy="132" r="7" className="fill-primary/50" />
+              <circle cx="312" cy="250" r="5" className="fill-accent/60" />
+            </svg>
           </div>
         </div>
       </section>

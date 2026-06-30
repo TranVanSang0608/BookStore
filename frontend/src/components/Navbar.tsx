@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, Heart, Menu, Moon, Search, ShoppingCart, Sun, X } from 'lucide-react'
+import { ChevronDown, Heart, Menu, Moon, ShoppingCart, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { fetchCategories } from '../api/categories'
@@ -8,6 +8,7 @@ import { useCart } from '../hooks/useCart'
 import { useSiteSettings } from '../hooks/useSiteSettings'
 import { useTheme } from '../lib/theme'
 import Logo from './Logo'
+import SearchAutocomplete from './SearchAutocomplete'
 
 export default function Navbar() {
   const { user, isLoggedIn, logout } = useAuth()
@@ -28,14 +29,6 @@ export default function Navbar() {
     setMobileOpen(false)
     logout()
     navigate('/') // về trang chủ sau khi đăng xuất
-  }
-
-  // Tìm kiếm: gom từ khoá vào URL /books?q=... (BookListPage đọc lại từ URL)
-  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const q = new FormData(e.currentTarget).get('q')?.toString().trim()
-    setMobileOpen(false)
-    navigate(q ? `/books?q=${encodeURIComponent(q)}` : '/books')
   }
 
   return (
@@ -83,20 +76,8 @@ export default function Navbar() {
           </ul>
         </div>
 
-        {/* Ô tìm kiếm (desktop) */}
-        <form
-          role="search"
-          onSubmit={handleSearch}
-          className="flex-1 hidden md:flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2 max-w-xl"
-        >
-          <Search size={17} className="text-base-content/70 shrink-0" />
-          <input
-            name="q"
-            aria-label="Tìm sách"
-            placeholder="Tìm tên sách, tác giả, thể loại…"
-            className="bg-transparent outline-none w-full text-sm"
-          />
-        </form>
+        {/* Ô tìm kiếm có gợi ý (desktop) */}
+        <SearchAutocomplete className="flex-1 hidden md:block max-w-xl" />
 
         {/* Nhóm icon bên phải */}
         <div className="flex items-center gap-1 md:gap-2 ml-auto">
@@ -207,20 +188,8 @@ export default function Navbar() {
       {/* ===== Menu mobile (mở bằng hamburger) ===== */}
       {mobileOpen && (
         <div className="md:hidden border-t border-base-300 bg-base-100 px-4 py-4 space-y-4">
-          {/* Tìm kiếm */}
-          <form
-            role="search"
-            onSubmit={handleSearch}
-            className="flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2"
-          >
-            <Search size={17} className="text-base-content/70 shrink-0" />
-            <input
-              name="q"
-              aria-label="Tìm sách"
-              placeholder="Tìm tên sách, tác giả…"
-              className="bg-transparent outline-none w-full text-sm"
-            />
-          </form>
+          {/* Tìm kiếm có gợi ý */}
+          <SearchAutocomplete onNavigate={() => setMobileOpen(false)} />
 
           {/* Chuyển sáng/tối */}
           <button
