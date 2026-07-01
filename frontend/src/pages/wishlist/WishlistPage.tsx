@@ -20,7 +20,7 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-4">
+    <div className="max-w-6xl mx-auto p-4 space-y-4">
       <h1 className="font-serif text-3xl font-semibold text-base-content">Sách yêu thích</h1>
 
       {!books || books.length === 0 ? (

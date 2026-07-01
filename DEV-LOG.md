@@ -988,4 +988,185 @@ Commits: hero `ab44e72`/`30ae9e2`/`cce55b6`; review-fix (commit tiếp theo).
 
 ---
 
+## 2026-07-01 — UI/UX polish Nhóm 1: UX chức năng mobile (nhánh `feat/ui-ux-polish`)
+
+### Bối cảnh
+
+Đối chiếu 2 đợt nhận xét UI/UX độc lập với code thật, xác nhận 4 điểm sau còn đúng và xử lý
+trước (nhóm "Ưu tiên cao" — thuần UX chức năng trên mobile). Nhóm "Cải thiện UI/UX" (nút bấm,
+hero contrast, menu overlay, container rộng hơn...) làm ở đợt sau, xem `THIET-KE.md`/kế hoạch
+lưu riêng nếu cần đối chiếu lại.
+
+### Đã làm
+
+- **Bộ lọc `/books` trên mobile**: trước đây sidebar bộ lọc (tìm kiếm + toàn bộ thể loại +
+  khoảng giá) luôn hiện đầu tiên, đẩy lưới sách xuống sâu. Giờ ẩn sidebar dưới `lg` (`hidden
+  lg:block`), thêm nút "Bộ lọc" (kèm badge số filter đang áp dụng) mở drawer trượt lên từ đáy
+  màn hình — có backdrop bấm để đóng, khóa cuộn nền khi mở. Component `BookFilters` dùng lại y
+  nguyên (không sửa logic bên trong), cả bản desktop lẫn bản trong drawer dùng chung 1 `key` để
+  state cục bộ (ô tìm/giá đang gõ dở) đồng bộ đúng khi URL đổi từ bên ngoài.
+- **Sticky CTA trang chi tiết sách (mobile)**: thêm thanh cố định đáy màn hình hiện giá + 2 nút
+  "Thêm vào giỏ" / "Mua ngay" — trước đây phải cuộn lên đầu trang mới bấm mua được. Logic tách
+  riêng khỏi khối `AddToCart` gốc (qty luôn = 1, giống pattern `QuickAdd` của `BookCard`), "Mua
+  ngay" gọi `addItem` rồi điều hướng `/checkout` giống hệt `AddToCart.handleBuyNow`.
+- **Chat widget đè lên sticky CTA**: bong bóng chat nâng lên `bottom-20` (thay vì `bottom-4`)
+  riêng trên trang chi tiết sách (`/books/:slug`) để không che thanh CTA mới; các trang khác giữ
+  nguyên vị trí cũ.
+- **Làm rõ checkout cần đăng nhập**: `LoginPage`/`RegisterPage` hiện alert "Đăng nhập/Tạo tài
+  khoản để hoàn tất đơn hàng của bạn" khi vào từ giỏ hàng (`state.from === '/checkout'`). Tiện
+  thể vá lỗ hổng liên quan: `RegisterPage` trước đây **không đọc `state.from`**, đăng ký xong
+  luôn về `/` — nếu khách chọn "Đăng ký ngay" thay vì đăng nhập sẽ mất luôn ý định checkout dù
+  giỏ đã merge. Giờ `RegisterPage` đọc `from` giống `LoginPage` và điều hướng đúng chỗ.
+
+### File chính
+
+- `pages/books/BookListPage.tsx`, `features/catalog/BookFilters.tsx` (không đổi logic, chỉ tái
+  sử dụng), `pages/books/BookDetailPage.tsx`, `features/chat/ChatWidget.tsx`,
+  `pages/auth/LoginPage.tsx`, `pages/auth/RegisterPage.tsx`
+
+### Verify
+
+- FE: `tsc -b` + `vite build` xanh.
+- Browser (mobile 375px, qua preview + JS eval do màn hình chụp ảnh bị lỗi hạ tầng phiên này):
+  drawer bộ lọc mở/đóng đúng (khóa/mở cuộn nền), sticky CTA "Thêm vào giỏ" tăng đúng số trên badge
+  giỏ hàng, "Mua ngay" điều hướng `/checkout` → `/login` kèm alert đúng, "Đăng ký ngay" giữ được
+  `from` sang `/register` và hiện alert tương ứng, chat widget đổi `bottom-20` đúng lúc ở trang
+  chi tiết sách.
+- Chưa test lại trên trình duyệt thật ngoài preview (khuyến nghị bấm thử tay trước khi merge).
+
+### Ghi chú bảo vệ
+
+- **Ẩn bằng CSS (`hidden lg:block`) vẫn giữ 2 component mounted song song** (sidebar desktop +
+  bản trong drawer) — phải cố ý dùng chung 1 `key` cho cả 2 để tránh lệch state cục bộ giữa 2 bản
+  khi URL đổi từ nơi khác (Back/Forward, link chia sẻ, chip lọc ở trang chi tiết).
+- **D2 (checkout bắt buộc đăng nhập) không đổi** — đợt này chỉ thêm thông báo rõ lý do, không mở
+  guest checkout (việc đó cần Decision mới, ảnh hưởng Order/Auth model, ngoài phạm vi đợt polish).
+
+Commits: (chưa commit — chờ review Nhóm 1 trước khi làm tiếp Nhóm 2).
+
+---
+
+## 2026-07-01 — UI/UX polish Nhóm 2: polish chung + nới container (nhánh `feat/ui-ux-polish`)
+
+### Đã làm
+
+- **Nút "Giỏ" trên `BookCard` rõ nghĩa hơn**: hiện "Thêm vào giỏ" từ `sm:` trở lên, mobile giữ
+  ngắn "Thêm" (icon vẫn luôn có).
+- **Contrast subtitle hero**: bỏ `/85` opacity ở đoạn mô tả hero (`text-neutral-content/85` →
+  `text-neutral-content`), overlay gradient sẵn có đã lo phần tương phản nền.
+- **Menu mobile thành overlay**: trước đây menu mobile chèn thẳng vào flow trang (đẩy nội dung
+  xuống), không backdrop, không đóng bằng phím tắt. Giờ là overlay cố định (`fixed inset-0`) có
+  backdrop mờ (bấm ra ngoài để đóng) + khoá cuộn nền + đóng bằng phím Esc — dùng lại đúng pattern
+  đã làm cho drawer bộ lọc ở Nhóm 1.
+- **Giỏ hàng mobile**: thêm link "← Tiếp tục mua sắm" phía trên danh sách giỏ; thêm dòng tiến độ
+  miễn phí ship trong khối "Tóm tắt" (tái dùng `useFreeShipThreshold` đã có ở Navbar) — "Còn thiếu
+  X để miễn phí giao hàng" hoặc thông báo đã đạt ngưỡng. **Không** hiện số tiền ship dự kiến cụ thể
+  vì phí ship phụ thuộc tỉnh/thành (D40) mà ở bước giỏ hàng chưa biết địa chỉ — số chính xác vẫn
+  chỉ hiện ở bước checkout như cũ.
+- **Nới container rộng hơn**: `max-w-6xl` (~1152px) → `max-w-7xl` (~1280px) ở Navbar/Footer/
+  HomePage/BookListPage/AuthorPage; `max-w-5xl` (~1024px) → `max-w-6xl` (~1152px) ở Cart/Checkout/
+  BookDetail/Wishlist/Profile/EmailVerifyBanner. Đo thực tế ở preview: tại 1920px, `max-w-7xl` vẫn
+  dư ~310-330px mỗi bên → thêm bậc `2xl:max-w-[1536px]` cho 4 chỗ chịu ảnh hưởng nhiều nhất theo
+  góp ý gốc (Navbar, Footer, HomePage, BookListPage), đo lại còn ~185-200px mỗi bên. AdminLayout
+  giữ nguyên `max-w-6xl` (khu quản trị, ngoài phạm vi góp ý mua sắm).
+- **Gợi ý sản phẩm khi search/lọc ra quá ít kết quả**: đo thực tế sau khi nới container, lưới vẫn
+  còn trống rõ khi chỉ có 1 kết quả (lưới rộng ~1200px chỉ có 1 thẻ sách). Thêm khối "Có thể bạn
+  cũng thích" (8 sách) khi kết quả ≤2 VÀ đang có filter `q`/`category` — tái dùng `fetchBooks` có
+  sẵn (cùng category nếu có lọc category, ngược lại lấy sách mới nhất chung), lọc trùng với kết
+  quả chính đang hiển thị. Không thêm API mới.
+
+### File chính
+
+- `features/catalog/BookCard.tsx`, `pages/home/HomePage.tsx`, `components/Navbar.tsx`,
+  `components/Footer.tsx`, `pages/cart/CartPage.tsx`, `pages/books/BookListPage.tsx`,
+  `pages/books/AuthorPage.tsx`, `pages/checkout/CheckoutPage.tsx`, `pages/books/BookDetailPage.tsx`,
+  `pages/wishlist/WishlistPage.tsx`, `pages/profile/ProfilePage.tsx`,
+  `components/EmailVerifyBanner.tsx`
+
+### Verify
+
+- FE: `tsc -b` + `vite build` xanh (3 lần, sau mỗi cụm đổi container/gợi ý sản phẩm).
+- Browser qua preview (JS eval + inspect, screenshot bị lỗi hạ tầng phiên này):
+  - Mobile 375px: menu mobile mở/đóng đúng bằng nút, Esc, và bấm backdrop (khoá/mở cuộn nền theo);
+    giỏ hàng hiện đúng "Tiếp tục mua sắm" + "Còn thiếu 260.000đ để miễn phí giao hàng" (subtotal
+    40.000đ, ngưỡng 300.000đ khớp).
+  - 1440×900: container `max-w-7xl` = 1280px, lề mỗi bên ~80px — hợp lý, chưa cần bậc 2xl.
+  - 1920×1080: trước khi thêm bậc 2xl, container 1280px dư ~310-330px mỗi bên; sau khi thêm
+    `2xl:max-w-[1536px]` còn ~185-200px mỗi bên; lưới "Bán chạy nhất" (5 cột) không bị thưa bất
+    thường ở độ rộng mới.
+  - Tìm "đắc nhân tâm" → 1 kết quả, khối "Có thể bạn cũng thích" hiện 8 sách không trùng.
+  - Dark mode: toggle qua lại `bookworm`/`bookwormdark`, các thành phần mới (overlay, backdrop,
+    sticky bar) đều dùng token DaisyUI (`bg-base-100`, `border-base-300`...) nên tự đổi màu đúng.
+
+### Ghi chú bảo vệ
+
+- **`position:fixed` + `z-index`**: overlay menu mobile và drawer bộ lọc dùng chung 1 pattern
+  (`fixed inset-0` bọc ngoài + backdrop `absolute inset-0` + panel `absolute`) — đơn giản, không
+  cần đo chiều cao header hay dùng thư viện ngoài.
+- **Nới container là đổi cơ học 1 class Tailwind mỗi chỗ** (`max-w-Nxl`), rủi ro thấp; số đo thực
+  tế ở preview (không đoán) mới quyết định có cần thêm bậc `2xl` hay không.
+- **Gợi ý sản phẩm chỉ bật khi có filter** — mặc định trang `/books` có 100 sách nên không bao giờ
+  rơi vào trường hợp ≤2 kết quả khi chưa lọc gì.
+
+Commits: (chưa commit).
+
+---
+
+## 2026-07-01 — Fix: nút "Thêm vào giỏ" tràn ra ngoài thẻ ở ~768-1000px
+
+### Bối cảnh
+
+Sau khi merge Nhóm 1+2, người dùng chụp màn hình lỗi thật ở DevTools responsive 790px: card sách
+trong lưới "Bán chạy nhất"/"Sách mới" (trang chủ) bị tràn/gãy chữ ở nút thêm giỏ.
+
+### Nguyên nhân
+
+`QuickAdd` (sửa ở mục 2.1 Nhóm 2) dùng breakpoint `sm:` (đo theo **bề rộng màn hình** ≥640px) để
+quyết định hiện chữ "Thêm vào giỏ" đầy đủ hay rút gọn. Nhưng cùng 1 màn hình, `HomePage` dùng lưới
+`grid-cols-2 md:grid-cols-5` (kích hoạt 5 cột ngay từ 768px) làm mỗi thẻ chỉ rộng ~136px ở viewport
+790px — trong khi màn hình đã "đủ rộng" theo `sm:` nên chữ đầy đủ vẫn hiện, tràn ra ngoài ô chứa
+chỉ còn ~110px. Đây là lỗi kinh điển: breakpoint theo viewport không phản ánh đúng bề rộng THẺ khi
+số cột lưới khác nhau giữa các trang (`BookListPage` tối đa 4 cột, `HomePage` tối đa 5 cột).
+
+### Đã sửa
+
+1. **Container Query thay cho viewport breakpoint** (Tailwind 4 hỗ trợ sẵn, không cần plugin):
+   thêm `@container` vào khung ngoài `BookCard`; nhãn "Thêm vào giỏ" chỉ hiện khi **thẻ** (không
+   phải màn hình) rộng ≥ `15rem` (240px, đo đủ chỗ cho giá 6 chữ số + icon + padding nút). Dưới
+   ngưỡng đó chỉ hiện icon — vẫn còn `aria-label` đầy đủ cho a11y (đúng tinh thần góp ý gốc: "mobile
+   giữ ngắn nhưng cần aria tốt").
+2. **Giảm `gap-2` → `gap-1`** ở hàng giá + nút (tiết kiệm 4px, hết ~2.7px lệch nhỏ ở thẻ hẹp nhất).
+3. **Thêm bậc lưới trung gian ở `HomePage`**: `grid-cols-2 md:grid-cols-5` → `grid-cols-2
+   sm:grid-cols-3 lg:grid-cols-5` (áp dụng cho cả 2 lưới "Bán chạy nhất"/"Sách mới" + skeleton loading)
+   — khoảng 640-1024px (nơi 5 cột làm thẻ quá hẹp cho MỌI mức giá kể cả icon-only) giờ hiện 3 cột,
+   thẻ đủ rộng để hiện được cả chữ đầy đủ; 5 cột chỉ dùng từ `lg` (1024px) trở lên, nơi có đủ bề
+   rộng tuyệt đối cho 5 cột.
+
+### File chính
+
+- `features/catalog/BookCard.tsx`, `pages/home/HomePage.tsx`
+
+### Verify
+
+- FE: `tsc -b` + `vite build` xanh (build lại sau mỗi bước sửa).
+- Đo tràn thật bằng preview (đo `button.getBoundingClientRect().right` so với hàng cha) ở 6 mốc:
+  375, 640, 790 (đúng viewport lỗi trong ảnh), 1024, 1280, 1920px — **tràn = 0 ở mọi mốc**, kể cả
+  sách giá 3 chữ số nghìn (110.000đ, 299.000đ — chuỗi giá dài hơn nên dễ tràn nhất). Ở 1920px xác
+  nhận đã hiện đủ "Thêm vào giỏ" (thẻ đủ rộng qua ngưỡng 240px).
+
+### Ghi chú bảo vệ
+
+- **Container Query (`@container`) khác Media Query (`sm:`, `md:`...)**: media query đo theo màn
+  hình, container query đo theo bề rộng của chính phần tử cha gần nhất có `@container`. Bài toán
+  "cùng màn hình nhưng số cột lưới khác nhau làm thẻ rộng khác nhau" chỉ container query giải đúng
+  gốc rễ; đây là tính năng lõi Tailwind 4 (bản dự án đang dùng), không cần cài thêm gì.
+- **`min-width: auto` mặc định của flex item**: nút bên trong hàng `flex justify-between` không tự
+  co nhỏ hơn nội dung của nó (icon+chữ+padding) dù cha có `justify-between` — đây là lý do chữ
+  "tràn" thay vì tự động ẩn/co lại. Sửa bằng cách chủ động ẩn/hiện chữ theo container query, không
+  dựa vào flexbox tự co giãn.
+
+Commits: (chưa commit).
+
+---
+
 *(Phase 10 Deploy: sẽ ghi tiếp tại đây)*

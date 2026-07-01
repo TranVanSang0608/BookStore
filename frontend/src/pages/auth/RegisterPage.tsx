@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { registerApi } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
 import AuthLayout from '../../components/AuthLayout'
@@ -21,6 +21,10 @@ export default function RegisterPage() {
 
   const { login, isLoggedIn } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Vào đây từ LoginPage (state.from được truyền tiếp qua link "Đăng ký ngay") — đăng ký xong
+  // vẫn quay lại đúng trang đang định vào (vd /checkout), giống LoginPage
+  const from = (location.state as { from?: string } | null)?.from ?? '/'
 
   const mutation = useMutation({
     mutationFn: registerApi,
@@ -28,12 +32,12 @@ export default function RegisterPage() {
     // await login để merge giỏ guest xong rồi mới navigate (xem LoginPage)
     onSuccess: async (data) => {
       await login(data)
-      navigate('/')
+      navigate(from, { replace: true })
     },
   })
 
-  // Đã đăng nhập rồi thì không cần đăng ký nữa → về trang chủ
-  if (isLoggedIn) return <Navigate to="/" replace />
+  // Đã đăng nhập rồi thì không cần đăng ký nữa → về trang trước đó (hoặc trang chủ)
+  if (isLoggedIn) return <Navigate to={from} replace />
 
   // 1 hàm set chung cho mọi input — tránh viết 5 hàm onChange gần giống nhau
   function setField(field: keyof typeof form) {
@@ -72,6 +76,10 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout title="Đăng ký tài khoản">
+      {from === '/checkout' && (
+        <div className="alert alert-info text-sm">Tạo tài khoản để hoàn tất đơn hàng của bạn.</div>
+      )}
+
       {mutation.isError && (
         <div className="alert alert-error text-sm">{getApiErrorMessage(mutation.error)}</div>
       )}
@@ -114,11 +122,11 @@ export default function RegisterPage() {
       </form>
 
       <div className="divider text-sm">hoặc</div>
-      <GoogleLoginButton from="/" />
+      <GoogleLoginButton from={from} />
 
       <p className="text-sm text-center mt-2">
         Đã có tài khoản?{' '}
-        <Link to="/login" className="link link-primary">
+        <Link to="/login" state={{ from }} className="link link-primary">
           Đăng nhập
         </Link>
       </p>

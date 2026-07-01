@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { Minus, Plus, ShoppingCart, Zap } from 'lucide-react'
+import { Check, Minus, Plus, ShoppingCart, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { fetchBookBySlug } from '../../api/books'
+import { fetchBookBySlug, type BookDetail } from '../../api/books'
 import { getApiErrorMessage } from '../../api/client'
 import CoverImage from '../../features/catalog/CoverImage'
 import RelatedBooks from '../../features/catalog/RelatedBooks'
@@ -118,6 +118,89 @@ function AddToCart({ bookId, stock }: { bookId: number; stock: number }) {
   )
 }
 
+// Thanh CTA cố định đáy màn hình — chỉ mobile (lg:hidden). Không dùng chung state với AddToCart
+// (qty luôn = 1 cho nhanh, giống QuickAdd của BookCard) — người cần đổi số lượng vẫn cuộn lên
+// dùng khối AddToCart gốc phía trên như cũ.
+function StickyAddToCart({ book }: { book: BookDetail }) {
+  const { addItem } = useCart()
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState<'add' | 'buy' | null>(null)
+  const [added, setAdded] = useState(false)
+  const [error, setError] = useState(false)
+
+  async function handleAdd() {
+    setBusy('add')
+    setError(false)
+    try {
+      await addItem(book.id, 1, book.stock_quantity)
+      setAdded(true)
+      setTimeout(() => setAdded(false), 1500)
+    } catch {
+      setError(true)
+      setTimeout(() => setError(false), 2000)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function handleBuyNow() {
+    setBusy('buy')
+    setError(false)
+    try {
+      await addItem(book.id, 1, book.stock_quantity)
+      navigate('/checkout')
+    } catch {
+      setError(true)
+      setTimeout(() => setError(false), 2000)
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-base-100 border-t border-base-300 p-3 flex items-center gap-3">
+      <div className="min-w-0">
+        <p className="font-serif text-lg font-bold text-primary whitespace-nowrap">
+          {formatPrice(book.price)}
+        </p>
+        {error && <p className="text-error text-xs">Chưa thêm được, thử lại</p>}
+      </div>
+      <div className="flex-1 flex items-center gap-2 justify-end">
+        {book.stock_quantity === 0 ? (
+          <button className="btn btn-primary btn-sm" disabled>
+            Hết hàng
+          </button>
+        ) : (
+          <>
+            <button
+              className="btn btn-outline btn-primary btn-sm gap-1"
+              onClick={handleAdd}
+              disabled={busy !== null}
+              aria-label="Thêm vào giỏ"
+            >
+              {busy === 'add' ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : added ? (
+                <Check size={16} />
+              ) : (
+                <ShoppingCart size={16} />
+              )}
+              Thêm giỏ
+            </button>
+            <button
+              className="btn btn-primary btn-sm gap-1"
+              onClick={handleBuyNow}
+              disabled={busy !== null}
+            >
+              {busy === 'buy' ? <span className="loading loading-spinner loading-xs" /> : <Zap size={16} />}
+              Mua ngay
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function BookDetailPage() {
   const { slug } = useParams()
   const [searchParams] = useSearchParams()
@@ -173,7 +256,7 @@ export default function BookDetailPage() {
   ] as const
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 pb-24 lg:pb-6">
       {/* Breadcrumb */}
       <nav aria-label="Breadcrumb" className="text-sm text-base-content/70 mb-4 flex gap-2 items-center flex-wrap">
         <Link to="/" className="hover:text-primary">
@@ -293,6 +376,8 @@ export default function BookDetailPage() {
       </div>
 
       <RelatedBooks slug={book.slug} />
+
+      <StickyAddToCart book={book} />
     </div>
   )
 }

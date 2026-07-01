@@ -50,6 +50,12 @@ export default function LoginPage() {
 
   return (
     <AuthLayout title="Đăng nhập">
+      {/* Từ giỏ hàng bấm "Tiến hành đặt hàng" bị đá vào đây (D2: checkout bắt buộc đăng nhập) —
+          báo rõ lý do để không cảm giác bị chuyển trang đột ngột */}
+      {from === '/checkout' && (
+        <div className="alert alert-info text-sm">Đăng nhập để hoàn tất đơn hàng của bạn.</div>
+      )}
+
       {mutation.isError && (
         <div className="alert alert-error text-sm">{getApiErrorMessage(mutation.error)}</div>
       )}
@@ -100,7 +106,7 @@ export default function LoginPage() {
 
       <p className="text-sm text-center">
         Chưa có tài khoản?{' '}
-        <Link to="/register" className="link link-primary">
+        <Link to="/register" state={{ from }} className="link link-primary">
           Đăng ký ngay
         </Link>
       </p>

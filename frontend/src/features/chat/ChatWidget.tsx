@@ -38,6 +38,11 @@ export default function ChatWidget() {
   // Ẩn ở khu admin (Layout chỉ bọc trang khách, nhưng chặn thêm cho chắc)
   if (location.pathname.startsWith('/admin')) return null
 
+  // Trang chi tiết sách (mobile) có thanh CTA cố định đáy màn hình (xem BookDetailPage) —
+  // nâng bong bóng chat lên để không đè lên thanh đó. Các trang khác giữ nguyên bottom-4.
+  const isBookDetailPage = /^\/books\/[^/]+$/.test(location.pathname)
+  const bottomOffset = isBookDetailPage ? 'bottom-20 lg:bottom-4' : 'bottom-4'
+
   function send(text: string) {
     const content = text.trim()
     if (!content || mutation.isPending) return
@@ -56,7 +61,7 @@ export default function ChatWidget() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Mở trợ lý tư vấn sách"
-          className="fixed bottom-4 right-4 z-50 btn btn-primary btn-circle btn-lg shadow-lg"
+          className={`fixed ${bottomOffset} right-4 z-50 btn btn-primary btn-circle btn-lg shadow-lg`}
         >
           <MessageCircle className="w-6 h-6" />
         </button>
@@ -64,7 +69,9 @@ export default function ChatWidget() {
 
       {/* Khung chat */}
       {open && (
-        <div className="fixed bottom-4 right-4 z-50 flex h-[32rem] max-h-[calc(100vh-2rem)] w-96 max-w-[calc(100vw-2rem)] flex-col rounded-box border border-base-300 bg-base-100 shadow-2xl">
+        <div
+          className={`fixed ${bottomOffset} right-4 z-50 flex h-[32rem] max-h-[calc(100vh-2rem)] w-96 max-w-[calc(100vw-2rem)] flex-col rounded-box border border-base-300 bg-base-100 shadow-2xl`}
+        >
           {/* Header */}
           <div className="flex items-center justify-between rounded-t-box border-b border-base-300 bg-primary px-4 py-3 text-primary-content">
             <span className="font-serif font-semibold">Trợ lý Ánh Sách</span>

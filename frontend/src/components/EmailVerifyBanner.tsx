@@ -27,7 +27,7 @@ export default function EmailVerifyBanner() {
 
   return (
     <div className="bg-warning/15 border-b border-warning/30">
-      <div className="max-w-5xl mx-auto px-4 py-2 flex flex-wrap items-center gap-2 text-sm">
+      <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center gap-2 text-sm">
         <span>📧 Email của bạn chưa được xác thực — kiểm tra hộp thư để hoàn tất.</span>
         {mutation.isSuccess ? (
           <span className="text-success font-medium">Đã gửi lại email xác thực!</span>
