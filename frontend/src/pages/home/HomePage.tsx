@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, BookOpen, CreditCard, Gift, RotateCcw, Search, Truck } from 'lucide-react'
+import { ArrowRight, BookOpen, CreditCard, Gift, RotateCcw, Truck } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { fetchBestsellers, fetchBooks } from '../../api/books'
 import { fetchCategories } from '../../api/categories'
 import BookCard from '../../features/catalog/BookCard'
 import BookCardSkeleton from '../../features/catalog/BookCardSkeleton'
 import ErrorState from '../../components/ErrorState'
+import SearchAutocomplete from '../../components/SearchAutocomplete'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 
 // Tiêu đề của một khối (mắt-trên nhỏ + tên + link "Xem tất cả")
@@ -42,7 +43,6 @@ function ValueProp({ icon, title, desc }: { icon: ReactNode; title: string; desc
 }
 
 export default function HomePage() {
-  const navigate = useNavigate()
   useDocumentTitle() // trang chủ → tiêu đề thương hiệu mặc định
 
   // Sách mới: 10 cuốn mới nhất (sort mặc định = newest).
@@ -69,16 +69,12 @@ export default function HomePage() {
   // Chỉ hiện thể loại CÓ sách (book_count > 0) ở khu khám phá — tránh bấm vào ra trang rỗng
   const visibleCategories = (categories ?? []).filter((c) => (c.book_count ?? 0) > 0)
 
-  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const q = new FormData(e.currentTarget).get('q')?.toString().trim()
-    navigate(q ? `/books?q=${encodeURIComponent(q)}` : '/books')
-  }
-
   return (
     <div>
       {/* ===================== HERO ===================== */}
-      <section className="relative overflow-hidden bg-neutral text-neutral-content">
+      {/* KHÔNG dùng overflow-hidden ở đây: dropdown gợi ý của ô tìm kiếm cần tràn qua mép dưới hero.
+          Các lớp nền trang trí đều inset-0 (+ ảnh object-cover tự crop) nên không có gì tràn thật. */}
+      <section className="relative bg-neutral text-neutral-content">
         {/* Nền gradient trang trí — LUÔN hiện (kể cả mobile khi ảnh ẩn) → hero không bị trống.
             Lớp 1: rêu đậm chuyển nhẹ sang xanh chính. Lớp 2: điểm sáng ấm góc phải — chất "ánh sách". */}
         <div
@@ -121,22 +117,8 @@ export default function HomePage() {
               Văn học, kinh tế, kỹ năng và thiếu nhi — giao nhanh, gói ghém như một món quà tri thức.
             </p>
 
-            <form
-              onSubmit={handleSearch}
-              role="search"
-              className="mt-6 flex items-center gap-2 bg-base-100 text-base-content border border-base-300 rounded-full p-1.5 pl-5 max-w-lg shadow-sm"
-            >
-              <Search size={18} className="text-base-content/70 shrink-0" />
-              <input
-                name="q"
-                aria-label="Tìm sách"
-                placeholder="Tên sách, tác giả…"
-                className="bg-transparent outline-none w-full text-sm"
-              />
-              <button type="submit" className="btn btn-primary rounded-full">
-                Tìm sách
-              </button>
-            </form>
+            {/* Tìm kiếm có gợi ý — cùng component với navbar để hành vi đồng nhất (BUG #2) */}
+            <SearchAutocomplete variant="hero" className="mt-6 max-w-lg" />
 
             {visibleCategories.length > 0 && (
               <div className="flex gap-2 mt-4 flex-wrap items-center">

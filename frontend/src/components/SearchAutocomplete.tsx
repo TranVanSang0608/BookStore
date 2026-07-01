@@ -7,14 +7,18 @@ import { formatPrice } from '../lib/format'
 
 // Ô tìm kiếm CÓ GỢI Ý. Gõ ≥ 2 ký tự → sau 250ms ngừng gõ mới gọi /api/books?q=...&limit=6
 // → hiện tối đa 6 sách khớp ngay dưới ô. Tái dùng fetchBooks (endpoint đã có) nên KHÔNG cần API mới.
-// Dùng chung cho navbar desktop + menu mobile (onNavigate để đóng menu mobile sau khi chọn).
+// Dùng chung cho navbar desktop + menu mobile (onNavigate để đóng menu mobile sau khi chọn)
+// và hero trang chủ (variant="hero": ô to hơn, nền base-100, có nút submit "Tìm sách").
 export default function SearchAutocomplete({
   className = '',
+  variant = 'navbar',
   onNavigate,
 }: {
   className?: string
+  variant?: 'navbar' | 'hero'
   onNavigate?: () => void
 }) {
+  const isHero = variant === 'hero'
   const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -67,9 +71,13 @@ export default function SearchAutocomplete({
       <form
         role="search"
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2"
+        className={
+          isHero
+            ? 'flex items-center gap-2 bg-base-100 text-base-content border border-base-300 rounded-full p-1.5 pl-5 shadow-sm'
+            : 'flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2'
+        }
       >
-        <Search size={17} className="text-base-content/70 shrink-0" />
+        <Search size={isHero ? 18 : 17} className="text-base-content/70 shrink-0" />
         <input
           name="q"
           value={q}
@@ -79,14 +87,21 @@ export default function SearchAutocomplete({
           }}
           onFocus={() => setOpen(true)}
           aria-label="Tìm sách"
-          placeholder="Tìm tên sách, tác giả…"
+          placeholder={isHero ? 'Tên sách, tác giả…' : 'Tìm tên sách, tác giả…'}
           autoComplete="off"
           className="bg-transparent outline-none w-full text-sm"
         />
+        {isHero && (
+          <button type="submit" className="btn btn-primary rounded-full">
+            Tìm sách
+          </button>
+        )}
       </form>
 
+      {/* text-base-content đặt tường minh: trong hero, context là text-neutral-content (chữ sáng)
+          → nếu để kế thừa, tên sách sẽ gần như tàng hình trên nền base-100 */}
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full mt-2 bg-base-100 border border-base-300 rounded-box shadow-lg z-50 overflow-hidden">
+        <div className="absolute left-0 right-0 top-full mt-2 bg-base-100 text-base-content border border-base-300 rounded-box shadow-lg z-50 overflow-hidden">
           {isFetching && suggestions.length === 0 ? (
             <div className="px-4 py-3 text-sm text-base-content/70 flex items-center gap-2">
               <span className="loading loading-spinner loading-xs" /> Đang tìm…

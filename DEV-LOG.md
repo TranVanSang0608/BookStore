@@ -1169,4 +1169,56 @@ Commits: (chưa commit).
 
 ---
 
+## 2026-07-02 — Fix BUG #2: hero search không có autocomplete
+
+### Bối cảnh
+
+Báo lỗi từ đợt test: ô tìm kiếm lớn trên hero trang chủ chỉ submit được form, không hiện dropdown
+gợi ý như search trong navbar → trải nghiệm không đồng nhất giữa 2 ô tìm kiếm.
+
+### Nguyên nhân
+
+`HomePage` dùng **form thuần tự viết** (chỉ có `onSubmit` → navigate), trong khi navbar dùng
+component `SearchAutocomplete` có debounce + gợi ý. Hero ra đời trước, autocomplete thêm sau
+(Nhóm 3, 2026-06-30) chỉ gắn vào navbar mà quên hero.
+
+### Đã sửa
+
+1. **`SearchAutocomplete` thêm prop `variant: 'navbar' | 'hero'`** (mặc định `navbar` — navbar/menu
+   mobile không đổi gì). Variant `hero` giữ NGUYÊN giao diện hero cũ: ô to `bg-base-100` + nút
+   submit "Tìm sách" + placeholder cũ. Logic gợi ý (debounce 250ms, ≥2 ký tự, limit 6, "Xem tất
+   cả kết quả") dùng chung 100%.
+2. **`HomePage` thay form thuần bằng `<SearchAutocomplete variant="hero" />`** — xoá được
+   `handleSearch`/`useNavigate`/icon Search import riêng.
+3. **Bỏ `overflow-hidden` ở section hero** — dropdown 6 gợi ý cao ~320px sẽ tràn qua mép dưới hero
+   và bị CẮT CỤT nếu giữ. Đo thực tế: dropdown bottom 775px > hero bottom 613px (tràn 162px). Các
+   lớp nền trang trí đều `inset-0` (+ ảnh `object-cover` tự crop) nên không có gì tràn thật → bỏ an toàn.
+4. **Dropdown thêm `text-base-content` tường minh** — trong hero, context chữ là `text-neutral-content`
+   (chữ sáng); nếu để kế thừa thì ở theme sáng tên sách sẽ gần như tàng hình trên nền `base-100`.
+
+### File chính
+
+- `components/SearchAutocomplete.tsx`, `pages/home/HomePage.tsx`
+
+### Verify
+
+- FE: `lint` + `tsc -b && vite build` xanh.
+- Browser qua preview: gõ "dac" → dropdown hiện "Đắc Nhân Tâm — Dale Carnegie — 86.000đ" + hàng
+  "Xem tất cả kết quả cho 'dac'"; gõ "nha" → đủ 6 gợi ý + hàng xem tất cả, dropdown tràn qua mép
+  hero 162px vẫn hiển thị đầy đủ (đè lên dải cam kết dịch vụ, z-50); click gợi ý điều hướng đúng
+  `/books/nha-dau-tu-thong-minh`; navbar search xác nhận không đổi (vẫn `bg-base-200`, không nút
+  submit); màu chữ dropdown đọc được ở CẢ 2 theme (dark: kem/nâu tối, light: nâu/kem); console 0 lỗi.
+
+### Ghi chú bảo vệ
+
+- **1 component 2 variant thay vì copy code**: hành vi gợi ý chỉ có 1 nguồn — sau này đổi debounce/
+  limit/endpoint chỉ sửa 1 chỗ, hero + navbar + menu mobile tự khớp.
+- **`overflow-hidden` vs dropdown absolute**: phần tử absolute vẫn bị clip bởi ancestor có
+  `overflow-hidden` bất kể `z-index` — z-index chỉ quyết định thứ tự vẽ, không "thoát" được clipping.
+  Đã ghi comment tại section hero để không ai thêm lại.
+
+Commits: (chưa commit).
+
+---
+
 *(Phase 10 Deploy: sẽ ghi tiếp tại đây)*
