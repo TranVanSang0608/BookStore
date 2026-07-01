@@ -19,6 +19,11 @@ export async function getFee(req: Request, res: Response) {
   res.json({ success: true, data: fee });
 }
 
+// Public: thông tin ship tối thiểu cho FE (ngưỡng miễn phí) — không lộ cấu hình nội bộ
+export async function getInfo(_req: Request, res: Response) {
+  res.json({ success: true, data: await shippingService.getPublicShippingInfo() });
+}
+
 // ---------- Admin ----------
 
 export async function adminListZones(_req: Request, res: Response) {

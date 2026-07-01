@@ -1,19 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, Heart, Menu, Moon, Search, ShoppingCart, Sun, X } from 'lucide-react'
+import { ChevronDown, Heart, Menu, Moon, ShoppingCart, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { fetchCategories } from '../api/categories'
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
+import { useFreeShipThreshold } from '../hooks/useFreeShipThreshold'
 import { useSiteSettings } from '../hooks/useSiteSettings'
+import { formatPrice } from '../lib/format'
 import { useTheme } from '../lib/theme'
 import Logo from './Logo'
+import SearchAutocomplete from './SearchAutocomplete'
 
 export default function Navbar() {
   const { user, isLoggedIn, logout } = useAuth()
   const { count } = useCart()
   const { isDark, toggle } = useTheme()
   const settings = useSiteSettings() // hotline shop (admin sửa được)
+  const freeShipThreshold = useFreeShipThreshold() // ngưỡng miễn phí ship (admin sửa ở /admin/shipping)
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -30,20 +34,12 @@ export default function Navbar() {
     navigate('/') // về trang chủ sau khi đăng xuất
   }
 
-  // Tìm kiếm: gom từ khoá vào URL /books?q=... (BookListPage đọc lại từ URL)
-  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const q = new FormData(e.currentTarget).get('q')?.toString().trim()
-    setMobileOpen(false)
-    navigate(q ? `/books?q=${encodeURIComponent(q)}` : '/books')
-  }
-
   return (
     <header className="bg-base-100 border-b border-base-300">
       {/* ===== Thanh utility (ẩn trên mobile) ===== */}
       <div className="hidden md:block bg-neutral text-neutral-content/85 text-xs">
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-          <span>Miễn phí giao hàng cho đơn từ 300.000đ</span>
+          <span>Miễn phí giao hàng cho đơn từ {formatPrice(freeShipThreshold)}</span>
           <div className="flex items-center gap-4">
             <span>Hotline: {settings.shop_hotline}</span>
             <Link to="/orders" className="hover:text-neutral-content">
@@ -66,37 +62,8 @@ export default function Navbar() {
           <Logo size={32} />
         </Link>
 
-        {/* Menu "Sách" — đổ từ thể loại thật (desktop) */}
-        <div className="dropdown dropdown-bottom hidden md:block">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-sm gap-1 font-semibold">
-            Sách <ChevronDown size={16} />
-          </div>
-          <ul
-            tabIndex={0}
-            className="menu dropdown-content bg-base-100 rounded-box shadow w-56 mt-2 z-40 max-h-96 flex-nowrap overflow-y-auto"
-          >
-            {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).map((c) => (
-              <li key={c.id}>
-                <Link to={`/books?category=${c.slug}`}>{c.name}</Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Ô tìm kiếm (desktop) */}
-        <form
-          role="search"
-          onSubmit={handleSearch}
-          className="flex-1 hidden md:flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2 max-w-xl"
-        >
-          <Search size={17} className="text-base-content/70 shrink-0" />
-          <input
-            name="q"
-            aria-label="Tìm sách"
-            placeholder="Tìm tên sách, tác giả, thể loại…"
-            className="bg-transparent outline-none w-full text-sm"
-          />
-        </form>
+        {/* Ô tìm kiếm có gợi ý (desktop) */}
+        <SearchAutocomplete className="flex-1 hidden md:block max-w-xl" />
 
         {/* Nhóm icon bên phải */}
         <div className="flex items-center gap-1 md:gap-2 ml-auto">
@@ -192,7 +159,9 @@ export default function Navbar() {
           >
             Trang chủ
           </NavLink>
-          {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).slice(0, 7).map((c) => (
+          {/* Hiện ĐỦ mọi thể loại (không cắt) — dải có overflow-x-auto nên tự cuộn ngang khi
+              thêm thể loại mới; tránh việc thể loại thứ 9+ âm thầm biến mất khỏi nav desktop. */}
+          {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).map((c) => (
             <Link
               key={c.id}
               to={`/books?category=${c.slug}`}
@@ -207,20 +176,8 @@ export default function Navbar() {
       {/* ===== Menu mobile (mở bằng hamburger) ===== */}
       {mobileOpen && (
         <div className="md:hidden border-t border-base-300 bg-base-100 px-4 py-4 space-y-4">
-          {/* Tìm kiếm */}
-          <form
-            role="search"
-            onSubmit={handleSearch}
-            className="flex items-center gap-2 bg-base-200 border border-base-300 rounded-full px-4 py-2"
-          >
-            <Search size={17} className="text-base-content/70 shrink-0" />
-            <input
-              name="q"
-              aria-label="Tìm sách"
-              placeholder="Tìm tên sách, tác giả…"
-              className="bg-transparent outline-none w-full text-sm"
-            />
-          </form>
+          {/* Tìm kiếm có gợi ý */}
+          <SearchAutocomplete onNavigate={() => setMobileOpen(false)} />
 
           {/* Chuyển sáng/tối */}
           <button

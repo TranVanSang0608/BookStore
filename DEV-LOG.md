@@ -887,4 +887,105 @@ thật. Quyết định: **D62**.
 
 ---
 
-*(Phase 10 Polish/Deploy: sẽ ghi tiếp tại đây)*
+## 2026-06-30 — UI/UX Polish (Nhóm 1–3, nhánh `feat/ui-ux-polish`)
+
+Bối cảnh: rà soát một bản đánh giá UI/UX độc lập, đối chiếu với code thật. Sửa các điểm
+đúng; bỏ qua/đính chính các điểm chẩn đoán sai — vd "trang đơn hàng bị đen" thực ra do gõ
+**sai URL** (`/profile/orders` không tồn tại; route đúng là `/orders`) + **thiếu trang 404**;
+"thống kê hiện —" là do **DB mất kết nối** (Neon đổi mật khẩu), không phải bug code.
+
+### Đã làm
+
+**Nhóm 1 — quick win**
+- Trang 404 (route catch-all `*`) cho cả cửa hàng lẫn admin — trước đây URL lạ ra màn hình trắng/đen.
+- Banner "email chưa xác thực": thêm nút × đóng trong phiên (`sessionStorage`).
+- `BookCard` luôn chừa dòng sao (mờ "Chưa có đánh giá" khi 0 review) → các card cao đều nhau.
+- Checkout: dòng gợi ý "mua thêm X để miễn phí vận chuyển" dựa trên `free_threshold`.
+
+**Nhóm 2 — dữ liệu**
+- Làm giàu 100 cuốn sách: mô tả nâng lên 2–3 câu; tab "Thông tin" đầy đủ cho MỌI sách
+  (ISBN + ngôn ngữ tự sinh, bổ sung NXB/năm/trang cho 12 cuốn gốc).
+- `seed.ts`: helper `makeIsbn()` sinh ISBN-13 hợp lệ (tiền tố VN 978-604 + chữ số kiểm tra);
+  `upsert` đổi sang **update lại phần nội dung** để re-seed cập nhật được sách đã tồn tại.
+
+**Nhóm 3 — tính năng**
+- `SearchAutocomplete`: ô tìm kiếm có gợi ý (debounce 250ms, ≥2 ký tự), **tái dùng**
+  `GET /api/books?q=...&limit=6` (không cần API mới); dùng chung navbar desktop + mobile.
+- Trang chủ: hero thành 2 cột trên màn lớn + minh họa SVG chồng sách lấp nửa phải.
+
+### File chính
+- FE: `pages/NotFoundPage.tsx` (mới), `routes/index.tsx`, `components/EmailVerifyBanner.tsx`,
+  `features/catalog/BookCard.tsx`, `pages/checkout/CheckoutPage.tsx`,
+  `components/SearchAutocomplete.tsx` (mới), `components/Navbar.tsx`, `pages/home/HomePage.tsx`
+- BE: `prisma/seed.ts`
+
+### Verify
+- BE: `tsc --noEmit` xanh · **263 test** xanh · `prisma db seed` OK (100 sách, idempotent).
+- FE: `tsc -b` + `vite build` xanh.
+- Browser: 404 render đúng; dòng sao đồng nhất; tab Thông tin đủ 5 dòng (NXB/năm/ngôn ngữ/trang/ISBN);
+  autocomplete trả gợi ý ("đắc nhân" → Đắc Nhân Tâm); hero art hiện ở ≥`lg`.
+
+### Khái niệm cần hiểu để bảo vệ
+1. **Route catch-all `*`** — React Router duyệt theo thứ tự; URL không khớp route nào sẽ rơi vào `*`.
+   Trước đây không có nên ra trang rỗng; thêm vào là hết "màn hình đen".
+2. **Autocomplete không cần backend mới** — endpoint danh sách `/api/books` đã hỗ trợ `q` + `limit`;
+   FE chỉ thêm debounce (đợi ngừng gõ mới gọi) để khỏi bắn API mỗi phím.
+3. **ISBN là dữ liệu demo sinh tự động** (đúng định dạng + chữ số kiểm tra), KHÔNG phải ISBN thật của NXB.
+4. **Hero:** ban đầu là minh họa SVG thuần, NHƯNG các commit sau (`ab44e72`, `30ae9e2`, `cce55b6`)
+   đã thay sang **ảnh thật** `public/hero.webp` (nén WebP ~77KB từ PNG bằng ffmpeg). Xem entry
+   2026-07-01 bên dưới cho chi tiết. (Ghi chú này giữ lại để đánh dấu lịch sử thay đổi.)
+5. **Idempotent + create-only đã nới** — `upsert.update` giờ làm tươi mô tả/thông tin khi re-seed,
+   nhưng KHÔNG đụng giá/tồn kho.
+
+Commits: `e51e13b` (N1) · `51730cc` (N2) · `eb14320` (N3). (CLAUDE.md đã chuyển sang gitignore — `a24a21c`.)
+
+---
+
+## 2026-07-01 — Hero ảnh thật + căn số + sửa theo review (nhánh `feat/ui-ux-polish`)
+
+### Đã làm
+
+**Hero — thay minh họa SVG bằng ảnh thật**
+- `public/hero.webp` (nén WebP ~77KB từ PNG 1.86MB bằng `ffmpeg`); ảnh khoe sách bên PHẢI, chữ bên
+  TRÁI trên vùng tường tối; `object-right` + overlay `gradient-to-r`; `fetchPriority="high"`.
+- Ảnh hiện từ **md (≥768px)**; dưới md ẩn ảnh nhưng nền hero LUÔN là **gradient tối thương hiệu**
+  (neutral + điểm sáng accent) → mobile không bị trống. Chữ luôn sáng (`neutral-content`).
+- Fix chống tràn: h1 giữ `text-4xl` tới lg (chỉ `text-5xl` ≥1024px) — tránh tràn cột ở dải 768–1024.
+
+**Căn chữ số serif (gốc rễ)** — `index.css`: `.font-serif { font-variant-numeric: lining-nums tabular-nums }`.
+Cormorant Garamond mặc định dùng oldstyle figures (số cao thấp lệch) → mọi giá tiền/số serif nay thẳng hàng.
+
+**Dọn hero/navbar:** bỏ khối số "100/8/24h" (mâu thuẫn badge + trùng cam kết); badge "Hàng nghìn" →
+"Tuyển chọn đầu sách chất lượng"; bỏ nút dropdown "Sách" trùng dải thể loại ngang.
+
+**Sửa theo review (2026-07-01):**
+- **Ngưỡng miễn phí ship ĐỘNG:** thêm endpoint public `GET /api/shipping/info` (chỉ trả `free_threshold`);
+  hook `useFreeShipThreshold` (mặc định 300k) → Navbar + trang Điều khoản hết viết cứng "300.000đ",
+  tự khớp khi admin đổi ở `/admin/shipping`.
+- **Nav desktop hiện ĐỦ thể loại:** bỏ `.slice(0, 8)` (dải có `overflow-x-auto`) → thể loại thứ 9+
+  không còn âm thầm biến mất.
+- **ISBN seed ổn định:** `makeIsbn` hash theo **slug** thay vì vị trí mảng → sắp xếp lại BOOKS không đổi
+  ISBN sách cũ (thực sự idempotent).
+- Xoá comment lỗi thời ở HomePage; đính chính DEV-LOG (hero không còn là SVG).
+
+### File chính
+- FE: `pages/home/HomePage.tsx`, `index.css`, `components/Navbar.tsx`, `pages/legal/TermsPage.tsx`,
+  `api/shipping.ts`, `hooks/useFreeShipThreshold.ts` (mới), `public/hero.webp` (mới)
+- BE: `modules/shipping/{service,controller,routes}.ts`, `prisma/seed.ts`
+
+### Verify
+- BE: `tsc --noEmit` + `npm test` xanh; `prisma db seed` OK.
+- FE: `tsc -b` + `vite build` xanh; browser (light+dark, mobile/md/desktop): hero + số + ngưỡng ship.
+
+### Ghi chú bảo vệ
+- **Ngưỡng free ship 1 nguồn sự thật:** số hiển thị (Navbar/Điều khoản) và số tính phí (checkout) đều
+  từ backend → admin đổi 1 chỗ, mọi nơi khớp. Không còn số viết cứng rải rác.
+- **`font-variant-numeric`** là cách chuẩn ép font dùng "lining/tabular figures" cho số thẳng hàng —
+  đã đo xác nhận Cormorant Garamond có hỗ trợ 2 chế độ này.
+- **ISBN là dữ liệu demo** (đúng chuẩn 13 số + chữ số kiểm tra, tiền tố VN 978-604), sinh ổn định từ slug.
+
+Commits: hero `ab44e72`/`30ae9e2`/`cce55b6`; review-fix (commit tiếp theo).
+
+---
+
+*(Phase 10 Deploy: sẽ ghi tiếp tại đây)*

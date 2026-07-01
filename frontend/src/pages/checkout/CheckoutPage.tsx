@@ -280,6 +280,15 @@ export default function CheckoutPage() {
                     ))}
                 </span>
               </div>
+              {/* Gợi ý ngưỡng miễn phí: còn thiếu bao nhiêu để được free ship */}
+              {fee &&
+                !fee.free_shipping_applied &&
+                fee.free_threshold != null &&
+                subtotal < fee.free_threshold && (
+                  <p className="text-xs text-success/90">
+                    Mua thêm {formatPrice(fee.free_threshold - subtotal)} để được miễn phí vận chuyển
+                  </p>
+                )}
               <div className="flex justify-between text-lg font-bold">
                 <span>Tổng cộng</span>
                 <span className="text-primary">
