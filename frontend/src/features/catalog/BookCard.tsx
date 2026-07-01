@@ -39,7 +39,13 @@ function QuickAdd({ book }: { book: BookCardData }) {
       className="btn btn-sm btn-outline btn-primary gap-1"
     >
       {state === 'added' ? <Check size={15} /> : <ShoppingCart size={15} />}
-      {state === 'added' ? 'Đã thêm' : state === 'error' ? 'Lỗi' : 'Giỏ'}
+      {/* @[15rem] = container query theo BỀ RỘNG THẺ (không phải màn hình) — cùng 1 màn hình,
+          lưới 5 cột (HomePage) làm thẻ hẹp hơn lưới 4 cột (BookListPage) nên breakpoint theo
+          màn hình (sm:) từng làm chữ tràn ra ngoài khi thẻ quá hẹp dù màn hình đã "đủ rộng".
+          Thẻ hẹp hơn 15rem (240px) thì chỉ hiện icon — vẫn còn aria-label đầy đủ cho a11y. */}
+      <span className="hidden @[15rem]:inline">
+        {state === 'added' ? 'Đã thêm' : state === 'error' ? 'Lỗi' : 'Thêm vào giỏ'}
+      </span>
     </button>
   )
 }
@@ -49,7 +55,7 @@ function QuickAdd({ book }: { book: BookCardData }) {
 export default function BookCard({ book }: { book: BookCardData }) {
   const soldOut = book.stock_quantity === 0
   return (
-    <div className="group bg-base-100 border border-base-300 rounded-box overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+    <div className="@container group bg-base-100 border border-base-300 rounded-box overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
       <div className="p-3 pb-0">
         {/* aspect-[2/3]: giữ đúng tỷ lệ bìa sách dù ảnh gốc méo hay thiếu */}
         <figure className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
@@ -83,7 +89,7 @@ export default function BookCard({ book }: { book: BookCardData }) {
         <div className="mt-1">
           <Stars value={book.avg_rating} count={book.review_count} />
         </div>
-        <div className="flex items-center justify-between gap-2 mt-2">
+        <div className="flex items-center justify-between gap-1 mt-2">
           <span className="font-serif font-bold text-xl text-primary">{formatPrice(book.price)}</span>
           {!soldOut && <QuickAdd book={book} />}
         </div>

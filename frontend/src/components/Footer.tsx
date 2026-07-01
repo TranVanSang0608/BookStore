@@ -8,7 +8,7 @@ export default function Footer() {
   const settings = useSiteSettings() // thông tin shop admin sửa được (DB)
   return (
     <footer className="bg-neutral text-neutral-content/80">
-      <div className="max-w-6xl mx-auto px-4 py-12 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
+      <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-12 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
         {/* Cột thương hiệu */}
         <div>
           <Logo variant="full" tone="light" size={30} />
@@ -81,7 +81,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-neutral-content/10">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between gap-2 text-xs text-neutral-content/60">
+        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between gap-2 text-xs text-neutral-content/60">
           <span>© 2026 Ánh Sách. Bảo lưu mọi quyền.</span>
           <span className="flex gap-4">
             <Link to="/dieu-khoan" className="hover:text-neutral-content">

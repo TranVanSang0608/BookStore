@@ -32,7 +32,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <h1 className="font-serif text-3xl font-semibold text-base-content mb-6">Tài khoản của tôi</h1>
 
       <div className="grid md:grid-cols-[260px_1fr] gap-6 items-start">

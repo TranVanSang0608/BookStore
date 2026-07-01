@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ShoppingCart } from 'lucide-react'
+import { ArrowLeft, ShoppingCart } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchBooksByIds, type BookCardData } from '../../api/books'
@@ -10,6 +10,7 @@ import CoverImage from '../../features/catalog/CoverImage'
 import { useAuth } from '../../hooks/useAuth'
 import { useCart } from '../../hooks/useCart'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
+import { useFreeShipThreshold } from '../../hooks/useFreeShipThreshold'
 import { formatPrice } from '../../lib/format'
 
 // Một dòng hiển thị trên trang giỏ, đã quy về cùng shape cho cả 2 chế độ.
@@ -27,6 +28,7 @@ export default function CartPage() {
   const { items, updateQty, removeItem } = useCart()
   const navigate = useNavigate()
   const [error, setError] = useState('')
+  const freeShipThreshold = useFreeShipThreshold()
   useDocumentTitle('Giỏ hàng')
 
   // Chế độ user: giỏ enrich sẵn từ server (kèm is_active + subtotal do BE tính)
@@ -95,7 +97,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-4 py-6">
       <h1 className="font-serif text-3xl font-semibold text-base-content mb-5">Giỏ hàng</h1>
 
       {error && <div className="alert alert-error text-sm mb-4">{error}</div>}
@@ -123,6 +125,13 @@ export default function CartPage() {
         <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           {/* Cột trái: danh sách dòng giỏ */}
           <div className="space-y-3">
+            <Link
+              to="/books"
+              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <ArrowLeft size={15} />
+              Tiếp tục mua sắm
+            </Link>
             {lines.map((line) => (
               <CartRow key={line.book_id} line={line} onQty={handleQty} onRemove={handleRemove} />
             ))}
@@ -135,6 +144,21 @@ export default function CartPage() {
               <span className="text-base-content/70">Tạm tính</span>
               <span className="font-bold text-primary">{formatPrice(subtotal)}</span>
             </div>
+            {/* Tiến độ miễn phí ship dựa trên tạm tính — phí ship CHÍNH XÁC phụ thuộc tỉnh/thành
+                (D40) nên chỉ tính đúng lúc ở bước checkout, ở đây chỉ báo còn thiếu bao nhiêu */}
+            {subtotal > 0 && (
+              <p className="text-xs mb-1">
+                {subtotal >= freeShipThreshold ? (
+                  <span className="text-success">🎉 Đơn hàng của bạn được miễn phí giao hàng</span>
+                ) : (
+                  <>
+                    Còn thiếu{' '}
+                    <strong className="text-primary">{formatPrice(freeShipThreshold - subtotal)}</strong>{' '}
+                    để miễn phí giao hàng
+                  </>
+                )}
+              </p>
+            )}
             <p className="text-xs text-base-content/70 mb-4">
               Phí vận chuyển sẽ được tính ở bước đặt hàng.
             </p>

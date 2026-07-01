@@ -107,7 +107,7 @@ export default function HomePage() {
         />
 
         {/* Nội dung — chữ LUÔN sáng (neutral-content) vì nền hero luôn tối ở cả 2 theme → bỏ được các class đổi màu theo breakpoint. */}
-        <div className="relative max-w-6xl mx-auto px-4 py-14 md:py-20 md:min-h-[34rem] grid md:grid-cols-2 items-center">
+        <div className="relative max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-14 md:py-20 md:min-h-[34rem] grid md:grid-cols-2 items-center">
           <div className="max-w-xl">
             <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-neutral-content/90 border border-neutral-content/25 bg-neutral-content/10 rounded-full px-3 py-1">
               ★ Tuyển chọn đầu sách chất lượng
@@ -117,7 +117,7 @@ export default function HomePage() {
               <br />
               dành cho riêng bạn
             </h1>
-            <p className="text-neutral-content/85 mt-4 text-lg max-w-lg">
+            <p className="text-neutral-content mt-4 text-lg max-w-lg">
               Văn học, kinh tế, kỹ năng và thiếu nhi — giao nhanh, gói ghém như một món quà tri thức.
             </p>
 
@@ -158,7 +158,7 @@ export default function HomePage() {
 
       {/* ===================== CAM KẾT DỊCH VỤ ===================== */}
       <section className="bg-base-100 border-y border-base-300">
-        <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-6 grid grid-cols-2 md:grid-cols-4 gap-5">
           <ValueProp icon={<Truck size={22} />} title="Giao 24h nội thành" desc="Toàn quốc 2–4 ngày" />
           <ValueProp icon={<RotateCcw size={22} />} title="Đổi trả 7 ngày" desc="Miễn phí, dễ dàng" />
           <ValueProp icon={<CreditCard size={22} />} title="COD & VNPay" desc="Thanh toán an toàn" />
@@ -166,12 +166,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="max-w-6xl mx-auto px-4 py-14 space-y-16">
+      <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-14 space-y-16">
         {/* ===================== BÁN CHẠY (ẩn khi chưa có đơn Delivered) ===================== */}
         {bestsellers && bestsellers.length > 0 && (
           <section>
             <SectionHead eyebrow="Độc giả yêu thích" title="Bán chạy nhất" to="/books" />
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {bestsellers.map((book, i) => (
                 <div key={book.id} className="relative">
                   {/* Huy hiệu thứ hạng — chỉ là lớp trang trí phủ lên BookCard (giữ BookCard nguyên) */}
@@ -189,7 +189,7 @@ export default function HomePage() {
         <section>
           <SectionHead eyebrow="Vừa lên kệ" title="Sách mới" to="/books" />
           {newPending ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {Array.from({ length: 10 }).map((_, i) => (
                 <BookCardSkeleton key={i} />
               ))}
@@ -202,7 +202,7 @@ export default function HomePage() {
               retrying={newFetching}
             />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {newBooks?.items.map((book) => (
                 <BookCard key={book.id} book={book} />
               ))}

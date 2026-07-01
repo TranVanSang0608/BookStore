@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, Heart, Menu, Moon, ShoppingCart, Sun, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { fetchCategories } from '../api/categories'
 import { useAuth } from '../hooks/useAuth'
@@ -34,11 +34,25 @@ export default function Navbar() {
     navigate('/') // về trang chủ sau khi đăng xuất
   }
 
+  // Menu mobile là overlay — khóa cuộn nền + đóng bằng Esc khi đang mở
+  useEffect(() => {
+    if (!mobileOpen) return
+    document.body.style.overflow = 'hidden'
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMobileOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [mobileOpen])
+
   return (
     <header className="bg-base-100 border-b border-base-300">
       {/* ===== Thanh utility (ẩn trên mobile) ===== */}
       <div className="hidden md:block bg-neutral text-neutral-content/85 text-xs">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
+        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-2 flex items-center justify-between">
           <span>Miễn phí giao hàng cho đơn từ {formatPrice(freeShipThreshold)}</span>
           <div className="flex items-center gap-4">
             <span>Hotline: {settings.shop_hotline}</span>
@@ -57,7 +71,7 @@ export default function Navbar() {
       </div>
 
       {/* ===== Thanh chính ===== */}
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3 md:gap-5">
+      <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-3 flex items-center gap-3 md:gap-5">
         <Link to="/" aria-label="Ánh Sách - trang chủ" className="shrink-0">
           <Logo size={32} />
         </Link>
@@ -145,7 +159,7 @@ export default function Navbar() {
 
       {/* ===== Dải thể loại nhanh (desktop) ===== */}
       <nav aria-label="Thể loại" className="hidden md:block border-t border-base-300/70">
-        <div className="max-w-6xl mx-auto px-4 flex gap-5 text-sm overflow-x-auto">
+        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 flex gap-5 text-sm overflow-x-auto">
           <NavLink
             to="/"
             end
@@ -173,9 +187,15 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* ===== Menu mobile (mở bằng hamburger) ===== */}
+      {/* ===== Menu mobile (mở bằng hamburger) — overlay có backdrop, đóng bằng Esc/bấm ra ngoài ===== */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-base-300 bg-base-100 px-4 py-4 space-y-4">
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-x-0 top-0 max-h-[85vh] overflow-y-auto border-b border-base-300 bg-base-100 px-4 py-4 space-y-4 shadow-lg">
           {/* Tìm kiếm có gợi ý */}
           <SearchAutocomplete onNavigate={() => setMobileOpen(false)} />
 
@@ -253,6 +273,7 @@ export default function Navbar() {
               </>
             )}
           </ul>
+          </div>
         </div>
       )}
     </header>

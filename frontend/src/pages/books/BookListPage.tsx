@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { SearchX, X } from 'lucide-react'
+import { SearchX, SlidersHorizontal, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fetchBooks } from '../../api/books'
 import { fetchCategories } from '../../api/categories'
@@ -31,6 +32,15 @@ export default function BookListPage() {
   const params = Object.fromEntries(searchParams.entries())
   useDocumentTitle('Kho sách')
 
+  // Drawer bộ lọc trên mobile (ẩn sidebar mặc định, mở bằng nút "Bộ lọc" — xem BookFilters bên dưới)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  useEffect(() => {
+    document.body.style.overflow = mobileFiltersOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileFiltersOpen])
+
   // queryKey chứa params → đổi filter là key đổi → React Query tự fetch lại
   const { data, isPending, isError } = useQuery({
     queryKey: ['books', params],
@@ -43,6 +53,20 @@ export default function BookListPage() {
     queryFn: fetchCategories,
     staleTime: Infinity,
   })
+
+  // Kết quả lọc/tìm còn quá ít (1-2 cuốn) → lưới bị trống nhiều, gợi ý thêm sách cho đỡ lạc lõng.
+  // Có category đang lọc thì gợi ý cùng thể loại; chỉ có từ khoá (q) thì lấy sách mới nhất chung.
+  // Chỉ áp dụng khi đang có filter (q/category) — mặc định 100 sách trong kho không rơi vào TH này.
+  const showSuggestions =
+    !!data && data.items.length > 0 && data.items.length <= 2 && !!(params.q || params.category)
+  const { data: suggestions } = useQuery({
+    queryKey: ['books', 'suggestions', params.category ?? ''],
+    queryFn: () => fetchBooks(params.category ? { category: params.category, limit: '8' } : { limit: '8' }),
+    enabled: showSuggestions,
+  })
+  const suggestionItems = (suggestions?.items ?? []).filter(
+    (book) => !data?.items.some((item) => item.id === book.id),
+  )
 
   // Cập nhật 1 phần query trên URL; giá trị rỗng thì xóa khỏi URL cho gọn
   function patchParams(patch: Record<string, string>) {
@@ -61,9 +85,25 @@ export default function BookListPage() {
   const priceLabel = `${params.price_min ? formatPrice(Number(params.price_min)) : '0đ'} – ${
     params.price_max ? formatPrice(Number(params.price_max)) : 'không giới hạn'
   }`
+  const activeFilterCount = [params.q, activeCategory, hasPrice ? '1' : ''].filter(Boolean).length
+
+  // Dùng chung cho cả bản sidebar (desktop) lẫn bản trong drawer (mobile): URL đổi từ bên ngoài
+  // (Back/Forward, link share, chip ở trang chi tiết) → key đổi → cả 2 bản tự remount đọc value mới
+  const filtersKey = `${params.q ?? ''}|${params.price_min ?? ''}|${params.price_max ?? ''}`
+  const filtersProps = {
+    categories: categories ?? [],
+    value: {
+      q: params.q ?? '',
+      category: params.category ?? '',
+      price_min: params.price_min ?? '',
+      price_max: params.price_max ?? '',
+      sort: params.sort ?? '',
+    },
+    onChange: patchParams,
+  }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-6">
       <nav aria-label="Breadcrumb" className="text-sm text-base-content/70 mb-2 flex gap-2 items-center">
         <Link to="/" className="hover:text-primary">
           Trang chủ
@@ -75,31 +115,33 @@ export default function BookListPage() {
       <p className="text-base-content/70 mt-1 mb-6">Lọc nhanh theo thể loại và mức giá.</p>
 
       <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
-        {/* key = state cục bộ của BookFilters (ô search + khoảng giá): URL đổi mà không qua
-            form (Back/Forward, link share, bấm chip ở trang chi tiết) → key đổi → BookFilters
-            remount đọc lại value mới. Category là controlled nên tự sync, không cần key. */}
-        <BookFilters
-          key={`${params.q ?? ''}|${params.price_min ?? ''}|${params.price_max ?? ''}`}
-          categories={categories ?? []}
-          value={{
-            q: params.q ?? '',
-            category: params.category ?? '',
-            price_min: params.price_min ?? '',
-            price_max: params.price_max ?? '',
-            sort: params.sort ?? '',
-          }}
-          onChange={patchParams}
-        />
+        {/* Sidebar bộ lọc — chỉ hiện từ lg trở lên. Trên mobile bộ lọc chuyển vào drawer bên dưới
+            để không đẩy lưới sách xuống sâu (bộ lọc rất dài: tìm kiếm + toàn bộ thể loại + giá). */}
+        <div className="hidden lg:block">
+          <BookFilters key={filtersKey} {...filtersProps} />
+        </div>
 
         <div>
-          {/* Thanh công cụ: số kết quả + sắp xếp */}
+          {/* Thanh công cụ: nút bộ lọc (mobile) + số kết quả + sắp xếp */}
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <div className="text-sm text-base-content/70">
-              {data && (
-                <>
-                  Hiển thị <strong className="text-base-content">{data.total}</strong> kết quả
-                </>
-              )}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileFiltersOpen(true)}
+                className="btn btn-sm btn-outline gap-1.5 lg:hidden"
+              >
+                <SlidersHorizontal size={15} />
+                Bộ lọc
+                {activeFilterCount > 0 && (
+                  <span className="badge badge-primary badge-xs">{activeFilterCount}</span>
+                )}
+              </button>
+              <div className="text-sm text-base-content/70">
+                {data && (
+                  <>
+                    Hiển thị <strong className="text-base-content">{data.total}</strong> kết quả
+                  </>
+                )}
+              </div>
             </div>
             <label className="flex items-center gap-2 text-sm text-base-content/70">
               Sắp xếp
@@ -163,10 +205,49 @@ export default function BookListPage() {
                   onChange={(page) => patchParams({ page: String(page) })}
                 />
               </div>
+
+              {/* Kết quả quá ít → gợi ý thêm sách khác, tránh trang trống lạc lõng (desktop) */}
+              {showSuggestions && suggestionItems.length > 0 && (
+                <div className="mt-10">
+                  <h2 className="font-serif text-xl font-semibold text-base-content mb-4">
+                    Có thể bạn cũng thích
+                  </h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {suggestionItems.map((book) => (
+                      <BookCard key={book.id} book={book} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
+
+      {/* Drawer bộ lọc (mobile) — backdrop bấm ra ngoài để đóng + panel trượt lên từ đáy màn hình */}
+      {mobileFiltersOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileFiltersOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute bottom-0 inset-x-0 max-h-[85vh] overflow-y-auto rounded-t-box bg-base-100 pt-3 px-3 pb-6">
+            {/* Tay cầm kéo + nút đóng — BookFilters bên dưới đã tự có tiêu đề "Bộ lọc" riêng nên
+                không lặp lại tiêu đề ở đây */}
+            <div className="flex justify-end mb-1">
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                aria-label="Đóng bộ lọc"
+                className="btn btn-ghost btn-circle btn-sm"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <BookFilters key={filtersKey} {...filtersProps} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
