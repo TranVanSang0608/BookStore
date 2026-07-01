@@ -42,7 +42,7 @@ export default function BookListPage() {
   }, [mobileFiltersOpen])
 
   // queryKey chứa params → đổi filter là key đổi → React Query tự fetch lại
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, isFetching } = useQuery({
     queryKey: ['books', params],
     queryFn: () => fetchBooks(params),
   })
@@ -193,9 +193,19 @@ export default function BookListPage() {
 
           {data && data.items.length > 0 && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                {data.items.map((book) => (
-                  <BookCard key={book.id} book={book} />
+              {isFetching && !isPending && (
+                <div className="mb-3 text-sm text-base-content/70 flex items-center gap-2">
+                  <span className="loading loading-spinner loading-xs" />
+                  Đang cập nhật danh sách sách...
+                </div>
+              )}
+              <div
+                className={`grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 transition-opacity ${
+                  isFetching && !isPending ? 'opacity-80' : ''
+                }`}
+              >
+                {data.items.map((book, index) => (
+                  <BookCard key={book.id} book={book} priority={index < 4} />
                 ))}
               </div>
               <div className="mt-8">
@@ -213,8 +223,8 @@ export default function BookListPage() {
                     Có thể bạn cũng thích
                   </h2>
                   <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {suggestionItems.map((book) => (
-                      <BookCard key={book.id} book={book} />
+                    {suggestionItems.map((book, index) => (
+                      <BookCard key={book.id} book={book} priority={index < 2} />
                     ))}
                   </div>
                 </div>

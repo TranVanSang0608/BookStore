@@ -52,7 +52,7 @@ export default function LoginPage() {
     <AuthLayout title="Đăng nhập">
       {/* Từ giỏ hàng bấm "Tiến hành đặt hàng" bị đá vào đây (D2: checkout bắt buộc đăng nhập) —
           báo rõ lý do để không cảm giác bị chuyển trang đột ngột */}
-      {from === '/checkout' && (
+      {from.startsWith('/checkout') && (
         <div className="alert alert-info text-sm">Đăng nhập để hoàn tất đơn hàng của bạn.</div>
       )}
 

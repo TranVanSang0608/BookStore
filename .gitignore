@@ -23,8 +23,12 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Hướng dẫn local cho Claude Code (không commit)
-CLAUDE.md
+# File hướng dẫn/checklist local do agent tạo (không commit)
+/CLAUDE.md
+/README.md
+/ROADMAP.md
+/TODO.md
+/.nvmrc
 
 # Báo cáo / tài liệu nộp + artifact local (không thuộc mã nguồn)
 *.docx
