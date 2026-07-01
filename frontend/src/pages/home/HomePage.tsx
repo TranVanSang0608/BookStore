@@ -178,7 +178,7 @@ export default function HomePage() {
                   <span className="absolute -top-2 -left-2 z-10 w-8 h-8 rounded-full bg-secondary text-secondary-content font-serif font-bold text-lg flex items-center justify-center shadow-md">
                     {i + 1}
                   </span>
-                  <BookCard book={book} />
+                  <BookCard book={book} priority={i < 5} />
                 </div>
               ))}
             </div>
@@ -203,8 +203,8 @@ export default function HomePage() {
             />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {newBooks?.items.map((book) => (
-                <BookCard key={book.id} book={book} />
+              {newBooks?.items.map((book, index) => (
+                <BookCard key={book.id} book={book} priority={index < 5} />
               ))}
             </div>
           )}

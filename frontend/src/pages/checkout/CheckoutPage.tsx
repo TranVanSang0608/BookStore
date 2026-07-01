@@ -10,6 +10,41 @@ import { fetchShippingFee } from '../../api/shipping'
 import { previewVoucherApi, type VoucherPreview } from '../../api/vouchers'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatPrice } from '../../lib/format'
+import { formatShippingScope } from '../../lib/shipping-label'
+
+function CheckoutSkeleton() {
+  return (
+    <div className="max-w-6xl mx-auto p-4 space-y-4">
+      <div className="skeleton h-10 w-40" />
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
+        <div className="card bg-base-100 border border-base-300">
+          <div className="card-body space-y-4">
+            <div className="skeleton h-7 w-48" />
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div key={index} className="border border-base-300 rounded-box p-3 space-y-2">
+                <div className="skeleton h-4 w-2/3" />
+                <div className="skeleton h-4 w-full" />
+              </div>
+            ))}
+            <div className="skeleton h-8 w-36" />
+          </div>
+        </div>
+        <div className="card bg-base-100 border border-base-300">
+          <div className="card-body space-y-4">
+            <div className="skeleton h-7 w-44" />
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex justify-between gap-4">
+                <div className="skeleton h-4 w-2/3" />
+                <div className="skeleton h-4 w-20" />
+              </div>
+            ))}
+            <div className="skeleton h-11 w-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Trang checkout: chọn địa chỉ → xem phí ship theo zone + tổng tiền → đặt đơn (COD).
 // Route này nằm trong RequireAuth (checkout bắt buộc đăng nhập — D2).
@@ -86,11 +121,7 @@ export default function CheckoutPage() {
   })
 
   if (cartPending || addressesPending) {
-    return (
-      <div className="flex justify-center py-20">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    )
+    return <CheckoutSkeleton />
   }
 
   // Giỏ rỗng → không có gì để đặt
@@ -261,11 +292,10 @@ export default function CheckoutPage() {
               <div className="flex justify-between">
                 <span>
                   Phí vận chuyển
-                  {selected && (
+                  {selected && fee && (
                     <span className="text-base-content/60">
                       {' '}
-                      ({selected.province_name}
-                      {fee?.distance_km != null ? ` · ~${fee.distance_km} km` : ''})
+                      ({formatShippingScope(selected.province_name, fee.distance_km)})
                     </span>
                   )}
                 </span>

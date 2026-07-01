@@ -10,6 +10,68 @@ import {
   PAYMENT_GATEWAY_LABEL,
   PAYMENT_STATUS_META,
 } from '../../lib/order-status'
+import { formatShippingScope } from '../../lib/shipping-label'
+
+function PaymentResultAlert({ result }: { result: string | null }) {
+  if (result === 'success') {
+    return (
+      <div className="alert alert-success text-sm">Thanh toán VNPay thành công! Cảm ơn bạn đã đặt hàng.</div>
+    )
+  }
+  if (result === 'failed') {
+    return (
+      <div className="alert alert-error text-sm">
+        Thanh toán VNPay chưa thành công. Bạn có thể thử lại bên dưới.
+      </div>
+    )
+  }
+  if (result === 'invalid') {
+    return <div className="alert alert-warning text-sm">Không xác minh được kết quả thanh toán.</div>
+  }
+  return null
+}
+
+function OrderDetailSkeleton({ paymentResult }: { paymentResult: string | null }) {
+  return (
+    <div className="max-w-4xl mx-auto p-4 space-y-4">
+      <PaymentResultAlert result={paymentResult} />
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="space-y-2">
+          <div className="skeleton h-9 w-56" />
+          <div className="skeleton h-4 w-44" />
+        </div>
+        <div className="skeleton h-8 w-24 rounded-full" />
+      </div>
+      <div className="alert alert-info text-sm">
+        Đang tải chi tiết đơn hàng. Nếu bạn vừa quay lại từ VNPay, hệ thống có thể cần vài giây để cập nhật.
+      </div>
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={index} className="card bg-base-100 border border-base-300">
+            <div className="card-body space-y-3">
+              <div className="skeleton h-6 w-36" />
+              <div className="skeleton h-4 w-2/3" />
+              <div className="skeleton h-4 w-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="card bg-base-100 border border-base-300">
+        <div className="card-body space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <div className="skeleton h-14 w-10 rounded" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-4 w-2/3" />
+                <div className="skeleton h-4 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function OrderDetailPage() {
   const { code } = useParams()
@@ -22,6 +84,10 @@ export default function OrderDetailPage() {
   const { data: order, isPending, isError } = useQuery({
     queryKey: ['order', code],
     queryFn: () => fetchOrderByCode(code!),
+    enabled: Boolean(code),
+    retry: 2,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   })
   useDocumentTitle(order ? `Đơn ${order.order_code}` : 'Đơn hàng')
 
@@ -43,11 +109,7 @@ export default function OrderDetailPage() {
   })
 
   if (isPending) {
-    return (
-      <div className="flex justify-center py-20">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    )
+    return <OrderDetailSkeleton paymentResult={paymentResult} />
   }
 
   if (isError || !order) {
@@ -70,6 +132,7 @@ export default function OrderDetailPage() {
     order.status === 'Pending' &&
     payment?.gateway === 'vnpay' &&
     (payment.status === 'Pending' || payment.status === 'Failed')
+  const shippingScope = formatShippingScope(order.shipping_province_name, order.shipping_distance_km)
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
@@ -82,17 +145,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Banner kết quả thanh toán VNPay (đọc từ ?payment=... khi cổng redirect về) */}
-      {paymentResult === 'success' && (
-        <div className="alert alert-success text-sm">Thanh toán VNPay thành công! Cảm ơn bạn đã đặt hàng.</div>
-      )}
-      {paymentResult === 'failed' && (
-        <div className="alert alert-error text-sm">
-          Thanh toán VNPay chưa thành công. Bạn có thể thử lại bên dưới.
-        </div>
-      )}
-      {paymentResult === 'invalid' && (
-        <div className="alert alert-warning text-sm">Không xác minh được kết quả thanh toán.</div>
-      )}
+      <PaymentResultAlert result={paymentResult} />
 
       {cancelMutation.isError && (
         <div className="alert alert-error text-sm">{getApiErrorMessage(cancelMutation.error)}</div>
@@ -150,9 +203,7 @@ export default function OrderDetailPage() {
             <div className="flex justify-between text-sm">
               <span>
                 Phí vận chuyển
-                {order.shipping_distance_km != null && (
-                  <span className="text-base-content/60"> (~{order.shipping_distance_km} km)</span>
-                )}
+                {shippingScope && <span className="text-base-content/60"> ({shippingScope})</span>}
               </span>
               <span>{order.shipping_fee === 0 ? 'Miễn phí' : formatPrice(order.shipping_fee)}</span>
             </div>

@@ -7,9 +7,10 @@ import { useAuth } from '../hooks/useAuth'
 export default function RequireAuth({ children }: { children: ReactNode }) {
   const { isLoggedIn } = useAuth()
   const location = useLocation()
+  const from = `${location.pathname}${location.search}${location.hash}`
 
   if (!isLoggedIn) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    return <Navigate to="/login" replace state={{ from }} />
   }
   return <>{children}</>
 }

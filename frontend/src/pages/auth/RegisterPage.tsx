@@ -76,7 +76,7 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout title="Đăng ký tài khoản">
-      {from === '/checkout' && (
+      {from.startsWith('/checkout') && (
         <div className="alert alert-info text-sm">Tạo tài khoản để hoàn tất đơn hàng của bạn.</div>
       )}
 

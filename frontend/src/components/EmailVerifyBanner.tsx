@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { resendVerificationApi } from '../api/auth'
 import { getApiErrorMessage } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
@@ -13,6 +14,7 @@ const DISMISS_KEY = 'emailBannerDismissed'
 // email_verified = false. Cũng đóng vai trò "nhắc kiểm tra email" ngay sau khi đăng ký.
 export default function EmailVerifyBanner() {
   const { user } = useAuth()
+  const location = useLocation()
   const mutation = useMutation({ mutationFn: resendVerificationApi })
   // Đọc 1 lần lúc mount: trong phiên này user đã bấm × chưa?
   const [dismissed, setDismissed] = useState(() => sessionStorage.getItem(DISMISS_KEY) === '1')
@@ -22,8 +24,12 @@ export default function EmailVerifyBanner() {
     setDismissed(true)
   }
 
-  // Ẩn nếu: chưa login, đã xác thực, hoặc user đã chủ động đóng trong phiên
-  if (!user || user.email_verified || dismissed) return null
+  const isPaymentReturn =
+    location.pathname.startsWith('/orders/') && new URLSearchParams(location.search).has('payment')
+
+  // Ẩn nếu: chưa login, đã xác thực, user đã chủ động đóng trong phiên,
+  // hoặc đang ở trang kết quả VNPay để thông báo thanh toán không bị lấn.
+  if (!user || user.email_verified || dismissed || isPaymentReturn) return null
 
   return (
     <div className="bg-warning/15 border-b border-warning/30">

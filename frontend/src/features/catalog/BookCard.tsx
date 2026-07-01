@@ -52,7 +52,7 @@ function QuickAdd({ book }: { book: BookCardData }) {
 
 // Thẻ sách dùng chung cho trang chủ, danh sách, tác giả, sách liên quan.
 // Khung là <div>; nút tim + nút "Giỏ" là ANH EM với các <Link> (không lồng button trong <a>).
-export default function BookCard({ book }: { book: BookCardData }) {
+export default function BookCard({ book, priority = false }: { book: BookCardData; priority?: boolean }) {
   const soldOut = book.stock_quantity === 0
   return (
     <div className="@container group bg-base-100 border border-base-300 rounded-box overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
@@ -67,7 +67,13 @@ export default function BookCard({ book }: { book: BookCardData }) {
             aria-hidden="true"
             className="block w-full h-full"
           >
-            <CoverImage url={book.cover_image_url} title={book.title} className="w-full h-full" />
+            <CoverImage
+              url={book.cover_image_url}
+              title={book.title}
+              className="w-full h-full"
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : 'auto'}
+            />
           </Link>
           {soldOut && (
             <span className="absolute top-2 left-2 badge badge-error badge-sm">Hết hàng</span>
