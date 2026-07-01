@@ -78,43 +78,53 @@ export default function HomePage() {
   return (
     <div>
       {/* ===================== HERO ===================== */}
-      <section className="relative overflow-hidden bg-base-200">
-        {/* Ảnh nền — CHỈ desktop (mobile ẩn để tránh crop dọc làm hỏng ảnh ngang).
-            object-bottom giữ chồng sách + tách cà phê; vùng tối bên phải dành cho chữ.
-            fetchPriority cao + width/height: ảnh above-the-fold, tránh nhảy layout. */}
+      <section className="relative overflow-hidden bg-neutral text-neutral-content">
+        {/* Nền gradient trang trí — LUÔN hiện (kể cả mobile khi ảnh ẩn) → hero không bị trống.
+            Lớp 1: rêu đậm chuyển nhẹ sang xanh chính. Lớp 2: điểm sáng ấm góc phải — chất "ánh sách". */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-br from-neutral via-neutral to-primary/25"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_80%_25%,rgba(198,160,94,0.22),transparent_55%)]"
+        />
+
+        {/* Ảnh thật — CHỈ desktop (≥768px), đè lên nền gradient; object-right khoe sách bên PHẢI.
+            Mobile ẩn để tránh crop dọc làm hỏng ảnh ngang. fetchPriority cao + width/height chống nhảy layout. */}
         <img
           src="/hero.webp"
           alt=""
           width={1672}
           height={941}
           fetchPriority="high"
-          className="hidden lg:block absolute inset-0 w-full h-full object-cover object-bottom"
+          className="hidden md:block absolute inset-0 w-full h-full object-cover object-right"
         />
-        {/* Overlay: tối ở PHẢI (vùng chữ) → trong suốt dần sang TRÁI (giữ sách rõ).
-            Màu neutral nên tối ở cả theme sáng lẫn tối → chữ luôn đọc được. */}
-        <div className="hidden lg:block absolute inset-0 bg-gradient-to-l from-neutral/85 via-neutral/50 to-transparent" />
+        {/* Overlay đảm bảo chữ đọc được KHI có ảnh — tối ở TRÁI → trong suốt sang PHẢI. */}
+        <div
+          aria-hidden="true"
+          className="hidden md:block absolute inset-0 bg-gradient-to-r from-neutral/85 via-neutral/45 to-transparent"
+        />
 
-        {/* relative để khối chữ nổi LÊN TRÊN ảnh + overlay (cùng tầng positioned, vẽ sau) */}
-        <div className="relative max-w-6xl mx-auto px-4 py-14 md:py-20 lg:min-h-[34rem] grid lg:grid-cols-2 items-center">
-          {/* Cột chữ: mobile thường (base-content / nền base-200);
-              desktop đẩy sang cột PHẢI + chữ sáng (neutral-content) trên vùng ảnh tối. */}
-          <div className="max-w-xl lg:col-start-2 lg:text-neutral-content">
-            <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-accent border border-accent/30 bg-accent/10 lg:bg-black/25 lg:border-accent/50 rounded-full px-3 py-1">
+        {/* Nội dung — chữ LUÔN sáng (neutral-content) vì nền hero luôn tối ở cả 2 theme → bỏ được các class đổi màu theo breakpoint. */}
+        <div className="relative max-w-6xl mx-auto px-4 py-14 md:py-20 md:min-h-[34rem] grid md:grid-cols-2 items-center">
+          <div className="max-w-xl">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-neutral-content/90 border border-neutral-content/25 bg-neutral-content/10 rounded-full px-3 py-1">
               ★ Tuyển chọn đầu sách chất lượng
             </span>
-            <h1 className="font-serif text-4xl md:text-5xl font-semibold text-base-content lg:text-neutral-content leading-tight mt-4">
+            <h1 className="font-serif text-4xl lg:text-5xl font-semibold leading-tight mt-4">
               Tìm cuốn sách
               <br />
               dành cho riêng bạn
             </h1>
-            <p className="text-base-content/70 lg:text-neutral-content/85 mt-4 text-lg max-w-lg">
+            <p className="text-neutral-content/85 mt-4 text-lg max-w-lg">
               Văn học, kinh tế, kỹ năng và thiếu nhi — giao nhanh, gói ghém như một món quà tri thức.
             </p>
 
             <form
               onSubmit={handleSearch}
               role="search"
-              className="mt-6 flex items-center gap-2 bg-base-100 border border-base-300 rounded-full p-1.5 pl-5 max-w-lg shadow-sm"
+              className="mt-6 flex items-center gap-2 bg-base-100 text-base-content border border-base-300 rounded-full p-1.5 pl-5 max-w-lg shadow-sm"
             >
               <Search size={18} className="text-base-content/70 shrink-0" />
               <input
@@ -130,12 +140,12 @@ export default function HomePage() {
 
             {visibleCategories.length > 0 && (
               <div className="flex gap-2 mt-4 flex-wrap items-center">
-                <span className="text-sm text-base-content/70 lg:text-neutral-content/80">Phổ biến:</span>
+                <span className="text-sm text-neutral-content/80">Phổ biến:</span>
                 {visibleCategories.slice(0, 4).map((c) => (
                   <Link
                     key={c.id}
                     to={`/books?category=${c.slug}`}
-                    className="badge badge-outline border-base-300 lg:border-neutral-content/40 lg:text-neutral-content hover:border-primary hover:text-primary"
+                    className="badge badge-outline border-neutral-content/40 text-neutral-content hover:border-primary hover:text-primary hover:bg-base-100"
                   >
                     {c.name}
                   </Link>
