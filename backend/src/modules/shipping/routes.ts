@@ -14,6 +14,8 @@ const router = Router();
 // Public: phí ship chỉ là config tính toán, không có gì riêng tư —
 // trang checkout (đã RequireAuth phía FE) và cả guest xem trước đều gọi được
 router.get('/fee', controller.getFee);
+// Public: ngưỡng miễn phí ship cho headline Navbar/Điều khoản (không lộ công thức/kho)
+router.get('/info', controller.getInfo);
 
 // Admin: xem + sửa bảng phí ship theo tỉnh (auth + adminOnly)
 router.get('/admin/zones', auth, adminOnly, controller.adminListZones);

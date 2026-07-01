@@ -21,6 +21,16 @@ export async function fetchShippingFee(provinceCode: string, subtotal: number): 
   return data.data
 }
 
+// Ngưỡng miễn phí ship công khai (headline Navbar/Điều khoản). null = chưa cấu hình.
+export interface PublicShippingInfo {
+  free_threshold: number | null
+}
+
+export async function fetchShippingInfo(): Promise<PublicShippingInfo> {
+  const { data } = await apiClient.get<ApiResponse<PublicShippingInfo>>('/shipping/info')
+  return data.data
+}
+
 // ---------- Admin: quản lý phí ship theo tỉnh ----------
 
 export interface ShippingZone {

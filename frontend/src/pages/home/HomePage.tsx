@@ -45,7 +45,7 @@ export default function HomePage() {
   const navigate = useNavigate()
   useDocumentTitle() // trang chủ → tiêu đề thương hiệu mặc định
 
-  // Sách mới: 10 cuốn mới nhất (sort mặc định = newest). total dùng cho số liệu hero.
+  // Sách mới: 10 cuốn mới nhất (sort mặc định = newest).
   const {
     data: newBooks,
     isPending: newPending,

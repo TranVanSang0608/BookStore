@@ -171,10 +171,14 @@ type SeedBook = {
   language?: string;
 };
 
-// Sinh mã ISBN-13 HỢP LỆ (đúng chuẩn 13 chữ số + chữ số kiểm tra) từ số thứ tự sách.
+// Sinh mã ISBN-13 HỢP LỆ (13 chữ số + chữ số kiểm tra) TỪ SLUG sách — ỔN ĐỊNH: chèn/sắp xếp lại
+// mảng BOOKS về sau KHÔNG làm đổi ISBN của sách cũ ở lần seed lại (khác cách cũ dựa vào vị trí mảng).
 // Tiền tố 978-604 là mã quốc gia Việt Nam → trông giống ISBN sách Việt thật. Dùng cho dữ liệu demo.
-function makeIsbn(n: number): string {
-  const body = '978604' + String(n).padStart(6, '0'); // 12 chữ số đầu
+function makeIsbn(slug: string): string {
+  // Hash slug → 6 chữ số ổn định (isbn không unique nên nếu hiếm khi trùng cũng không sao)
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) % 1_000_000;
+  const body = '978604' + String(h).padStart(6, '0'); // 12 chữ số đầu
   let sum = 0;
   for (let i = 0; i < 12; i++) sum += Number(body[i]) * (i % 2 === 0 ? 1 : 3);
   const check = (10 - (sum % 10)) % 10; // chữ số kiểm tra theo công thức ISBN-13
@@ -332,14 +336,14 @@ async function seedCatalog() {
   }
   console.log(`✔ Author: ${AUTHORS.length}`);
 
-  for (const [i, b] of BOOKS.entries()) {
-    // isbn/language để trống ở dòng sách → tự sinh ISBN theo STT + mặc định Tiếng Việt
+  for (const b of BOOKS) {
+    // isbn/language để trống ở dòng sách → tự sinh ISBN theo slug (ổn định) + mặc định Tiếng Việt
     const info = {
       description: b.description,
       publisher: b.publisher,
       published_year: b.published_year,
       pages: b.pages,
-      isbn: b.isbn ?? makeIsbn(i + 1),
+      isbn: b.isbn ?? makeIsbn(b.slug),
       language: b.language ?? 'Tiếng Việt',
     };
     const book = await prisma.book.upsert({

@@ -9,6 +9,14 @@ export function getShippingConfig() {
   return prisma.shippingConfig.findUnique({ where: { id: 1 } });
 }
 
+// Thông tin ship CÔNG KHAI cho FE hiển thị (headline "miễn phí từ X" ở Navbar / Điều khoản).
+// Chỉ lộ NGƯỠNG MIỄN PHÍ, không lộ công thức/kho. Admin đổi ngưỡng ở /admin/shipping →
+// Navbar/Điều khoản tự cập nhật theo (không còn viết cứng "300.000đ").
+export async function getPublicShippingInfo() {
+  const config = await getShippingConfig();
+  return { free_threshold: config?.free_threshold ?? null };
+}
+
 // Tính phí ship — NGUỒN SỰ THẬT DUY NHẤT (D40): checkout preview (`/shipping/fee`) + createOrder
 // đều gọi hàm này, FE không bao giờ tự tính (client sửa được).
 //

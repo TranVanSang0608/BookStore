@@ -1,6 +1,9 @@
+import { useFreeShipThreshold } from '../../hooks/useFreeShipThreshold'
+import { formatPrice } from '../../lib/format'
 import LegalPage, { LegalSection } from './LegalPage'
 
 export default function TermsPage() {
+  const freeShipThreshold = useFreeShipThreshold() // ngưỡng miễn phí ship (admin sửa ở /admin/shipping)
   return (
     <LegalPage title="Điều khoản dịch vụ" updated="06/2026">
       <LegalSection heading="1. Giới thiệu">
@@ -24,7 +27,7 @@ export default function TermsPage() {
       </LegalSection>
       <LegalSection heading="4. Giao hàng">
         <p>
-          Phí giao hàng tính theo tỉnh/thành; <strong>miễn phí cho đơn từ 300.000đ</strong>. Thời
+          Phí giao hàng tính theo tỉnh/thành; <strong>miễn phí cho đơn từ {formatPrice(freeShipThreshold)}</strong>. Thời
           gian dự kiến: 24h nội thành, 2–4 ngày các tỉnh khác.
         </p>
       </LegalSection>

@@ -5,7 +5,9 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { fetchCategories } from '../api/categories'
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
+import { useFreeShipThreshold } from '../hooks/useFreeShipThreshold'
 import { useSiteSettings } from '../hooks/useSiteSettings'
+import { formatPrice } from '../lib/format'
 import { useTheme } from '../lib/theme'
 import Logo from './Logo'
 import SearchAutocomplete from './SearchAutocomplete'
@@ -15,6 +17,7 @@ export default function Navbar() {
   const { count } = useCart()
   const { isDark, toggle } = useTheme()
   const settings = useSiteSettings() // hotline shop (admin sửa được)
+  const freeShipThreshold = useFreeShipThreshold() // ngưỡng miễn phí ship (admin sửa ở /admin/shipping)
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -36,7 +39,7 @@ export default function Navbar() {
       {/* ===== Thanh utility (ẩn trên mobile) ===== */}
       <div className="hidden md:block bg-neutral text-neutral-content/85 text-xs">
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-          <span>Miễn phí giao hàng cho đơn từ 300.000đ</span>
+          <span>Miễn phí giao hàng cho đơn từ {formatPrice(freeShipThreshold)}</span>
           <div className="flex items-center gap-4">
             <span>Hotline: {settings.shop_hotline}</span>
             <Link to="/orders" className="hover:text-neutral-content">
@@ -156,7 +159,9 @@ export default function Navbar() {
           >
             Trang chủ
           </NavLink>
-          {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).slice(0, 8).map((c) => (
+          {/* Hiện ĐỦ mọi thể loại (không cắt) — dải có overflow-x-auto nên tự cuộn ngang khi
+              thêm thể loại mới; tránh việc thể loại thứ 9+ âm thầm biến mất khỏi nav desktop. */}
+          {(categories ?? []).filter((c) => (c.book_count ?? 0) > 0).map((c) => (
             <Link
               key={c.id}
               to={`/books?category=${c.slug}`}
