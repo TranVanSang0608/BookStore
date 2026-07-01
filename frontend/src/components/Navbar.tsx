@@ -51,7 +51,7 @@ export default function Navbar() {
   return (
     <header className="bg-base-100 border-b border-base-300">
       {/* ===== Thanh utility (ẩn trên mobile) ===== */}
-      <div className="hidden md:block bg-neutral text-neutral-content/85 text-xs">
+      <div className="hidden lg:block bg-neutral text-neutral-content/85 text-xs">
         <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-2 flex items-center justify-between">
           <span>Miễn phí giao hàng cho đơn từ {formatPrice(freeShipThreshold)}</span>
           <div className="flex items-center gap-4">
@@ -71,28 +71,28 @@ export default function Navbar() {
       </div>
 
       {/* ===== Thanh chính ===== */}
-      <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-3 flex items-center gap-3 md:gap-5">
+      <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-3 flex items-center gap-3 lg:gap-5">
         <Link to="/" aria-label="Ánh Sách - trang chủ" className="shrink-0">
           <Logo size={32} />
         </Link>
 
         {/* Ô tìm kiếm có gợi ý (desktop) */}
-        <SearchAutocomplete className="flex-1 hidden md:block max-w-xl" />
+        <SearchAutocomplete className="flex-1 hidden lg:block max-w-xl" />
 
         {/* Nhóm icon bên phải */}
-        <div className="flex items-center gap-1 md:gap-2 ml-auto">
+        <div className="flex items-center gap-1 lg:gap-2 ml-auto">
           <Link
             to="/wishlist"
             aria-label="Sách yêu thích"
-            className="btn btn-ghost btn-circle btn-sm hidden md:inline-flex"
+            className="btn btn-ghost btn-circle btn-sm hidden lg:inline-flex"
           >
             <Heart size={20} />
           </Link>
           <Link
             to="/cart"
             aria-label="Giỏ hàng"
-            // Mobile: ép vùng bấm ≥44px (min-w/h-11); desktop giữ btn-sm gọn (md:min-*-0)
-            className="btn btn-ghost btn-circle btn-sm indicator min-h-11 min-w-11 md:min-h-0 md:min-w-0"
+            // Mobile/tablet: ép vùng bấm ≥44px; desktop giữ btn-sm gọn.
+            className="btn btn-ghost btn-circle btn-sm indicator min-h-11 min-w-11 lg:min-h-0 lg:min-w-0"
           >
             {count > 0 && (
               <span className="indicator-item badge badge-primary badge-xs">{count}</span>
@@ -102,7 +102,7 @@ export default function Navbar() {
 
           {/* Tài khoản (desktop) */}
           {isLoggedIn ? (
-            <div className="dropdown dropdown-end hidden md:block">
+            <div className="dropdown dropdown-end hidden lg:block">
               <div tabIndex={0} role="button" className="btn btn-ghost btn-sm gap-2 pl-2">
                 <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-semibold">
                   {user!.name.charAt(0).toUpperCase()}
@@ -134,7 +134,7 @@ export default function Navbar() {
               </ul>
             </div>
           ) : (
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <Link to="/login" className="btn btn-ghost btn-sm">
                 Đăng nhập
               </Link>
@@ -150,7 +150,7 @@ export default function Navbar() {
             aria-label="Mở menu"
             aria-expanded={mobileOpen}
             // Chỉ hiện trên mobile → vùng bấm ≥44px cho ngón tay
-            className="btn btn-ghost btn-circle btn-sm md:hidden min-h-11 min-w-11"
+            className="btn btn-ghost btn-circle btn-sm lg:hidden min-h-11 min-w-11"
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -158,7 +158,7 @@ export default function Navbar() {
       </div>
 
       {/* ===== Dải thể loại nhanh (desktop) ===== */}
-      <nav aria-label="Thể loại" className="hidden md:block border-t border-base-300/70">
+      <nav aria-label="Thể loại" className="hidden lg:block border-t border-base-300/70">
         <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 flex gap-5 text-sm overflow-x-auto">
           <NavLink
             to="/"
@@ -189,7 +189,7 @@ export default function Navbar() {
 
       {/* ===== Menu mobile (mở bằng hamburger) — overlay có backdrop, đóng bằng Esc/bấm ra ngoài ===== */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileOpen(false)}
