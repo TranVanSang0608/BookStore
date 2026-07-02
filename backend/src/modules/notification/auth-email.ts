@@ -12,24 +12,24 @@ function frontendOrigin(): string {
 export async function sendVerificationEmail(email: string, name: string, rawToken: string): Promise<void> {
   const url = `${frontendOrigin()}/verify-email?token=${encodeURIComponent(rawToken)}`;
   const html = renderEmail({
-    title: 'Xác thực email BookStore',
+    title: 'Xác thực email Ánh Sách',
     heading: 'Xác thực địa chỉ email',
     bodyHtml: `
       <p>Xin chào ${escapeHtml(name)},</p>
-      <p>Cảm ơn bạn đã đăng ký BookStore. Nhấn nút bên dưới để xác thực email này.
+      <p>Cảm ơn bạn đã đăng ký Ánh Sách. Nhấn nút bên dưới để xác thực email này.
          Liên kết có hiệu lực trong <strong>24 giờ</strong>.</p>
       <p style="color:#6b7280;font-size:13px;">Nếu bạn không tạo tài khoản này, hãy bỏ qua email.</p>`,
     ctaLabel: 'Xác thực email',
     ctaUrl: url,
   });
-  await sendMailSafe({ to: email, subject: '[BookStore] Xác thực địa chỉ email', html });
+  await sendMailSafe({ to: email, subject: '[Ánh Sách] Xác thực địa chỉ email', html });
 }
 
 // Gửi email đặt lại mật khẩu — link tới trang FE /reset-password?token=... (hạn 1 giờ).
 export async function sendPasswordResetEmail(email: string, name: string, rawToken: string): Promise<void> {
   const url = `${frontendOrigin()}/reset-password?token=${encodeURIComponent(rawToken)}`;
   const html = renderEmail({
-    title: 'Đặt lại mật khẩu BookStore',
+    title: 'Đặt lại mật khẩu Ánh Sách',
     heading: 'Yêu cầu đặt lại mật khẩu',
     bodyHtml: `
       <p>Xin chào ${escapeHtml(name)},</p>
@@ -40,5 +40,5 @@ export async function sendPasswordResetEmail(email: string, name: string, rawTok
     ctaLabel: 'Đặt lại mật khẩu',
     ctaUrl: url,
   });
-  await sendMailSafe({ to: email, subject: '[BookStore] Đặt lại mật khẩu', html });
+  await sendMailSafe({ to: email, subject: '[Ánh Sách] Đặt lại mật khẩu', html });
 }

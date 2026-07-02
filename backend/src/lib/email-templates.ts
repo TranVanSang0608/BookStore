@@ -5,8 +5,8 @@
 // Lưu ý email HTML: ứng dụng mail (Gmail, Outlook...) KHÔNG nạp file CSS ngoài và
 // lược bỏ <style> phức tạp → buộc dùng INLINE style + layout đơn giản (bảng/div).
 
-const BRAND = 'BookStore';
-const BRAND_COLOR = '#4f46e5'; // tím indigo — đồng bộ với theme FE
+const BRAND = 'Ánh Sách';
+const BRAND_COLOR = '#3e5a39'; // xanh rêu — khớp --color-primary theme "bookworm" của FE
 
 export interface EmailLayoutInput {
   /** Dùng cho thẻ <title> (tab khi mở email trên web) */

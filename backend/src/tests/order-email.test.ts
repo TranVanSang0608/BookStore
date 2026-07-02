@@ -11,6 +11,8 @@ const base: OrderEmailData = {
   order_code: 'BK-20260615-AB12',
   subtotal: 200000,
   shipping_fee: 20000,
+  discount_amount: 0,
+  voucher_code: null,
   total: 220000,
   note: null,
   payment_method: 'cod',
@@ -53,6 +55,20 @@ describe('buildOrderConfirmationEmail', () => {
 
   it('phí ship 0 hiện "Miễn phí"', () => {
     expect(buildOrderConfirmationEmail({ ...base, shipping_fee: 0 }).html).toContain('Miễn phí');
+  });
+
+  it('đơn có voucher hiện dòng giảm giá kèm mã; không voucher thì ẩn', () => {
+    expect(buildOrderConfirmationEmail(base).html).not.toContain('Giảm giá');
+
+    const { html } = buildOrderConfirmationEmail({
+      ...base,
+      discount_amount: 30000,
+      voucher_code: 'SALE30K',
+      total: 190000, // 200.000 + 20.000 − 30.000 — các số trong email phải cộng khớp
+    });
+    expect(html).toContain('Giảm giá (mã SALE30K)');
+    expect(html).toContain('30.000đ');
+    expect(html).toContain('190.000đ');
   });
 
   it('chỉ hiện ghi chú khi có note', () => {

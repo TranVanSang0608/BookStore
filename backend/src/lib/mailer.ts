@@ -11,7 +11,7 @@ function getMailConfig() {
   const apiKey = process.env.RESEND_API_KEY;
   // Người gửi mặc định: domain test của Resend (chỉ gửi được tới email chủ tài khoản).
   // Khi có domain riêng đã xác minh thì đổi MAIL_FROM trong .env.
-  const from = process.env.MAIL_FROM ?? 'BookStore <onboarding@resend.dev>';
+  const from = process.env.MAIL_FROM ?? 'Ánh Sách <onboarding@resend.dev>';
   if (!apiKey) {
     throw new Error('Thiếu RESEND_API_KEY trong .env — không gửi được email');
   }

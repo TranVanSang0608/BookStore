@@ -63,15 +63,16 @@
 | **Database** | PostgreSQL (cloud) | Render/Neon/Railway free tier |
 | **Validation** | Zod | Schema dùng được cả FE + BE |
 | **Frontend** | React 19 + Vite + React Router 7 | SPA, không Next.js (bản thực tế khi init — D33) |
-| **UI** | Tailwind CSS + DaisyUI hoặc Flowbite | Component sẵn |
-| **Server state** | React Query (đề xuất) | Cache + sync |
-| **Auth** | JWT (localStorage) + Passport.js (Google OAuth) | Defense XSS: React default escape |
+| **UI** | Tailwind 4 + DaisyUI 5 | Cấu hình qua CSS + plugin Vite, KHÔNG có tailwind.config.js (D33) |
+| **Server state** | React Query 5 | Cache + sync |
+| **Auth** | JWT (localStorage) + Google Identity Services | BE verify ID token bằng google-auth-library, KHÔNG Passport (pivot D60). Defense XSS: React default escape |
 | **File storage** | Cloudinary | Free 25GB, không cần thẻ. Upload từ backend qua Node SDK, có sẵn resize/optimize ảnh |
-| **Email** | Nodemailer + Gmail SMTP | App password (bật 2FA) |
+| **Email** | Resend API | Pivot từ Nodemailer/Gmail (D50) — 1 API key, mọi mail đi qua `lib/mailer.ts` |
 | **Payment** | VNPay sandbox | Cần callback URL công khai |
-| **Deploy** | Render/Railway (BE) + Postgres cloud | Free tier đủ cho đồ án |
+| **Deploy** | Vercel (FE) + Render (BE) + Neon (Postgres) | Free tier — chi tiết xem DEPLOY.md |
 | **Test** | Jest (unit cho business logic) | Integration chỉ nếu dư |
-| **Search** | WHERE ILIKE + filter combo | tsvector nếu cần ở NICE |
+| **Search** | ILIKE + unaccent (Postgres) | Tìm KHÔNG PHÂN BIỆT DẤU qua `$queryRaw` (migration `enable_unaccent`) — không cần tsvector |
+| **Chatbot** | DeepSeek API | Tư vấn sách; proxy qua BE `modules/chat`, 2 lớp rate-limit chống đốt key |
 
 ---
 
@@ -103,12 +104,13 @@
 - Review (verified purchase)
 - Recommend (cùng category + cùng author, KHÔNG collaborative filtering)
 - Admin dashboard với chart (doanh thu, top sản phẩm)
-- PostgreSQL full-text search (tsvector)
+- Tìm kiếm không phân biệt dấu (unaccent — thay kế hoạch tsvector)
 - Integration tests cho checkout + payment
+- Chatbot tư vấn sách (DeepSeek) — thêm sau deploy ("Phase 11")
 
 ---
 
-## 5. Data model — 19 bảng
+## 5. Data model — 21 bảng
 
 ### 5.1 Bảng theo tier
 
@@ -116,30 +118,35 @@
 
 | # | Bảng | Vai trò chính |
 |---|---|---|
-| 1 | **User** | `id, email, password_hash (nullable cho OAuth sau), name, phone, role ('user'\|'admin'), created_at` |
+| 1 | **User** | `id, email, password_hash (nullable cho OAuth), name, phone, role ('user'\|'admin'), email_verified (D53), token_version (revoke JWT khi đổi mật khẩu), created_at` |
 | 2 | **Address** | n-1 User. `province_code, ward_code, province_name, ward_name, street_detail, recipient_name, phone, is_default` (2 cấp — D32) |
 | 3 | **Author** | `id, name, bio, photo_url` |
 | 4 | **Category** | `id, name, slug, description` — flat 1 cấp |
-| 5 | **Book** | n-1 Author. `title, slug, description, price, stock_quantity, cover_image_url, isbn, publisher, published_year, language, pages, is_active` |
+| 5 | **Book** | n-1 Author. `title, slug, description, price, stock_quantity, cover_image_url, isbn, publisher, published_year, language, pages, is_active` + `avg_rating, review_count` denormalized (D58) |
 | 6 | **BookCategory** | Junction (book_id, category_id) — composite PK, n-n |
 | 7 | **Cart** | 1-1 User |
 | 8 | **CartItem** | n-1 Cart, n-1 Book. `quantity` |
-| 9 | **Order** | n-1 User. `order_code, status, subtotal, shipping_fee, discount_amount, total, note, placed_at, ...` + snapshot fields |
+| 9 | **Order** | n-1 User. `order_code, status, subtotal, shipping_fee, discount_amount, total, note, placed_at, ...` + snapshot fields (địa chỉ, `voucher_code`, `shipping_distance_km` — D62) |
 | 10 | **OrderItem** | n-1 Order. Snapshot data của Book + price |
 | 11 | **Payment** | n-1 Order. `gateway ('vnpay'\|'cod'), txn_ref, amount, status, gateway_response (JSON), paid_at, attempted_at` |
-| 12 | **ShippingZone** | Config table. `province_code, fee, free_threshold` |
+| 12 | **ShippingZone** | Config table. `province_code, fee, free_threshold, distance_km (D62)` |
 | 13 | **Province** | Địa giới tự host (D32). `code (PK), name` — đóng băng từ provinces.open-api.vn v2 |
 | 14 | **Ward** | n-1 Province. `code (PK), name, province_code` — 3.321 phường/xã |
 
-#### NICE entities (5 bảng)
+#### Bảng thêm sau CORE (7 bảng — Phase 6-8 + cấu hình)
 
 | # | Bảng | Vai trò |
 |---|---|---|
-| 13 | **Wishlist** | n-1 User, n-1 Book. Unique (user_id, book_id) |
-| 14 | **Voucher** | `code, discount_type, discount_value, min_order, max_discount, expire_at, usage_limit, used_count, per_user_limit, is_active` |
-| 15 | **VoucherUsage** | Log per (voucher, user, order). Cho per_user_limit |
-| 16 | **Review** | n-1 User, n-1 Book, n-1 Order. `rating (1-5), comment`. Unique (user_id, book_id) |
-| 17 | **RefreshToken** | Optional, nếu cần JWT refresh sau này |
+| 15 | **EmailToken** | Phase 6. Token verify email / reset password — lưu HASH, dùng 1 lần, có hạn (D52) |
+| 16 | **Voucher** | Phase 7. `code, discount_type, discount_value, min_order, max_discount, expire_at, usage_limit, used_count, per_user_limit, is_active` |
+| 17 | **VoucherUsage** | Phase 7. Log per (voucher, user, order). Cho per_user_limit |
+| 18 | **Wishlist** | Phase 8. n-1 User, n-1 Book. Unique (user_id, book_id) |
+| 19 | **Review** | Phase 8. n-1 User, n-1 Book. `rating (1-5), comment`. Unique (user_id, book_id). Verify mua hàng bằng QUERY lúc tạo, KHÔNG FK Order (D58) |
+| 20 | **SiteSetting** | Key-value cấu hình shop (hotline, email, địa chỉ...) — admin sửa qua UI (2026-06-25) |
+| 21 | **ShippingConfig** | Singleton (1 dòng, id=1) cấu hình phí ship theo khoảng cách: tọa độ kho, base/per-km fee, trần phí (D62) |
+
+> `RefreshToken` trong thiết kế gốc KHÔNG hiện thực — thay bằng `User.token_version` (đổi/đặt lại
+> mật khẩu thì tăng → mọi JWT cũ bị middleware từ chối ngay, không cần bảng riêng — xem D53).
 
 ---
 
@@ -198,23 +205,29 @@ Mọi op chạm vào `Book.stock` hoặc `Voucher.used_count` PHẢI atomic qua 
 
 ### 5.4 ERD (Mermaid)
 
+> ERD đầy đủ 21 bảng + bản xuất PNG cho báo cáo: xem `SO-DO-BAO-CAO.md` mục 2 (đồng bộ với bản dưới).
+
 ```mermaid
 erDiagram
+    PROVINCE ||--o{ WARD : "gồm"
+
     USER ||--o{ ADDRESS : "có nhiều"
-    USER ||--|| CART : "có 1"
+    USER ||--o| CART : "có 0/1 (lazy-create)"
     USER ||--o{ ORDER : "đặt"
     USER ||--o{ WISHLIST : "yêu thích"
     USER ||--o{ REVIEW : "viết"
     USER ||--o{ VOUCHERUSAGE : "dùng"
+    USER ||--o{ EMAILTOKEN : "token verify/reset"
 
     CART ||--o{ CARTITEM : "chứa"
     CARTITEM }o--|| BOOK : "ref"
 
     AUTHOR ||--o{ BOOK : "viết"
-    BOOK }o--o{ CATEGORY : "thuộc (via BookCategory)"
+    BOOK ||--o{ BOOKCATEGORY : "phân loại"
+    CATEGORY ||--o{ BOOKCATEGORY : "gồm"
 
     ORDER ||--o{ ORDERITEM : "chứa"
-    ORDERITEM }o--|| BOOK : "ref (snapshot)"
+    ORDERITEM }o--o| BOOK : "ref snapshot (SetNull)"
     ORDER ||--o{ PAYMENT : "có nhiều attempt"
     ORDER }o--o| VOUCHER : "áp dụng (snapshot)"
 
@@ -222,13 +235,13 @@ erDiagram
 
     WISHLIST }o--|| BOOK : "đánh dấu"
     REVIEW }o--|| BOOK : "đánh giá"
-    REVIEW }o--|| ORDER : "verify (Delivered)"
 
-    SHIPPINGZONE {
-        string province_code
-        decimal fee
-        decimal free_threshold
-    }
+    %% ĐỨNG RIÊNG (không FK): SHIPPINGZONE, SHIPPINGCONFIG, SITESETTING — bảng cấu hình.
+    %% Quan hệ "ẩn" cố ý KHÔNG dùng FK (xem bảng ghi chú ở SO-DO-BAO-CAO.md mục 2):
+    %%  - ADDRESS/SHIPPINGZONE lưu province_code/ward_code dạng string, KHÔNG FK tới PROVINCE/WARD
+    %%  - ORDER snapshot địa chỉ, KHÔNG FK tới ADDRESS
+    %%  - VOUCHERUSAGE.order_id là Int thường, KHÔNG FK tới ORDER
+    %%  - REVIEW KHÔNG có FK ORDER — verify "đã mua" bằng query lúc tạo (D58)
 ```
 
 ---
@@ -240,46 +253,40 @@ erDiagram
 ```
 backend/
 ├── prisma/
-│   ├── schema.prisma           # 19 bảng (CORE 14 trước, gồm Province/Ward — D32)
-│   ├── migrations/
-│   ├── data/                   # vn-locations.json — địa giới đóng băng (D32)
+│   ├── schema.prisma           # 21 bảng (xem mục 5)
+│   ├── migrations/             # 9 migration
+│   ├── data/                   # vn-locations.json + vn-provinces-latlng.json (D32, D62)
 │   └── seed.ts                 # seed địa giới + ShippingZone + admin + catalog mẫu
 ├── src/
-│   ├── modules/
-│   │   ├── auth/               # routes.ts, controller.ts, service.ts, schemas.ts
-│   │   ├── user/
+│   ├── modules/                # 18 module, mỗi module: routes / controller / service / schemas
+│   │   ├── auth/  user/  address/  locations/   # tài khoản, hồ sơ, sổ địa chỉ, dropdown tỉnh/phường
 │   │   ├── catalog/            # book, author, category gộp 1 module
-│   │   ├── cart/
-│   │   ├── wishlist/           # NICE
-│   │   ├── checkout/
-│   │   ├── order/
-│   │   ├── payment/            # VNPay integration
-│   │   ├── voucher/            # NICE
-│   │   ├── review/             # NICE
-│   │   ├── notification/       # NICE — email service
-│   │   ├── shipping/           # zone + calc
-│   │   └── admin/              # admin routes (composed từ các module trên)
-│   ├── middleware/
-│   │   ├── auth.ts             # verify JWT
-│   │   ├── adminOnly.ts
-│   │   ├── error.ts            # centralized error handler
-│   │   └── validate.ts         # Zod schema runner
-│   ├── lib/
-│   │   ├── prisma.ts           # Prisma client singleton
-│   │   ├── cloudinary.ts       # Cloudinary SDK config + upload helper
-│   │   ├── nodemailer.ts       # NICE
-│   │   ├── vnpay.ts            # signature + URL builder
-│   │   ├── jwt.ts
-│   │   └── logger.ts           # Winston
+│   │   ├── cart/  order/  payment/  shipping/   # luồng mua hàng (payment = COD + VNPay)
+│   │   ├── voucher/  wishlist/  review/         # NICE Phase 7-8
+│   │   ├── notification/       # email service (Resend — D50)
+│   │   ├── dashboard/          # admin dashboard (D61)
+│   │   ├── settings/           # SiteSetting key-value
+│   │   ├── chat/               # chatbot DeepSeek ("Phase 11")
+│   │   ├── upload/             # POST /api/uploads → Cloudinary (D34)
+│   │   └── health/
+│   ├── middleware/             # auth (JWT + token_version), adminOnly, error, validate (Zod)
+│   ├── lib/                    # prisma, jwt, mailer (Resend), vnpay, cloudinary, deepseek,
+│   │                           # google (GIS verify), geo + shipping-fee + province-coords (D62),
+│   │                           # email-token, email-templates, order-code, slug, voucher,
+│   │                           # image-signature, logger (Winston), client-ip, parse-id
+│   ├── generated/prisma/       # Prisma client generate vào đây (gitignored — D31)
 │   ├── utils/
-│   ├── tests/                  # unit cho service layer
-│   ├── jobs/                   # node-cron jobs (auto-cancel)
-│   ├── app.ts                  # Express app config
-│   └── server.ts               # entry point
+│   ├── tests/                  # 35 file unit test service layer (263 test, 2026-07-02)
+│   ├── jobs/                   # node-cron: auto-cancel-orders (D44)
+│   ├── app.ts                  # Express app config (KHÔNG spawn cron ở đây)
+│   └── server.ts               # entry point + spawn cron
 ├── .env.example
 ├── package.json
-└── tsconfig.json (nếu dùng TypeScript)
+└── tsconfig.json
 ```
+
+> Khác thiết kế gốc: KHÔNG có module `checkout` riêng (logic chia vào cart/shipping/order) và
+> KHÔNG có module `admin` riêng — route admin đặt trong từng module, bảo vệ bằng `adminOnly`.
 
 ### Frontend (React SPA)
 
@@ -288,20 +295,22 @@ frontend/
 ├── src/
 │   ├── pages/
 │   │   ├── home/
-│   │   ├── books/              # list + filter
-│   │   ├── book-detail/
+│   │   ├── books/              # list + detail + author (gộp — khác thiết kế gốc tách book-detail)
 │   │   ├── cart/
 │   │   ├── checkout/
-│   │   ├── orders/             # lịch sử đơn
+│   │   ├── orders/             # lịch sử + chi tiết đơn
 │   │   ├── profile/
 │   │   ├── wishlist/           # NICE
-│   │   └── admin/              # admin pages riêng
-│   ├── components/             # UI components shared
-│   ├── features/               # logic theo feature (cart, auth context...)
-│   ├── api/                    # axios instance + typed endpoints
-│   ├── hooks/                  # useAuth, useCart, ...
-│   ├── lib/                    # zod schemas (share rules với BE)
-│   ├── store/                  # auth context, cart context
+│   │   ├── auth/               # login, register, forgot/reset password, verify email
+│   │   ├── admin/              # admin pages riêng (dashboard, books, orders, vouchers, settings...)
+│   │   ├── legal/
+│   │   └── NotFoundPage.tsx
+│   ├── components/             # UI shared: Navbar, Footer, SearchAutocomplete, RequireAuth/RequireAdmin...
+│   ├── features/               # catalog (BookCard, BookFilters...), chat (ChatWidget)
+│   ├── api/                    # client.ts (axios instance) + 18 file endpoint typed
+│   ├── hooks/
+│   ├── lib/
+│   ├── store/                  # auth context
 │   ├── routes/
 │   └── main.tsx
 ├── .env                        # chỉ biến VITE_* (public, không secret)
@@ -321,7 +330,7 @@ frontend/
 | Auth defense | React default escape XSS, KHÔNG `dangerouslySetInnerHTML`, có CSP header | CORE |
 | CORS | Express CORS với origin của FE production | CORE |
 | Security headers | Helmet middleware | CORE |
-| Rate limiting | `express-rate-limit` cho `/api/auth/*` (chống brute-force) | CORE |
+| Rate limiting | `express-rate-limit` 4 lớp: `/api/auth/*` (brute-force) + global + chat per-IP + chat global (chống đốt DeepSeek key) | CORE |
 | Logging | Winston ra file + console (rotation theo ngày) | CORE |
 | Cron jobs | `node-cron` auto-cancel Pending > 24h, hoàn stock | CORE |
 | Image upload | Multer + Cloudinary. Max 2MB, .jpg/.png/.webp | CORE |
@@ -331,9 +340,9 @@ frontend/
 | Test | Jest unit cho service layer (voucher calc, stock, ship calc, total) | CORE |
 | Database transaction | Prisma `$transaction` cho mọi op chạm stock/voucher | CORE |
 | Integration test | Supertest cho checkout + payment | NICE |
-| Email | Nodemailer + Gmail SMTP (app password) | NICE |
-| Full-text search | PostgreSQL tsvector | NICE |
-| Google OAuth | Passport.js Google strategy | NICE |
+| Email | Resend API qua `lib/mailer.ts` (pivot D50); fail-soft, luôn ngoài transaction (D51) | NICE |
+| Search không dấu | PostgreSQL `unaccent` + ILIKE qua `$queryRaw` (thay kế hoạch tsvector) | NICE |
+| Google OAuth | Google Identity Services — BE verify ID token (`google-auth-library`), KHÔNG Passport (D60) | NICE |
 
 ---
 
@@ -352,7 +361,8 @@ frontend/
 | **7** ✅ | NICE | Voucher + VoucherUsage — **XONG** (% + cố định, per-user limit, D54–D56) | 2 |
 | **8** ✅ | NICE | Wishlist + Review + Recommend — **XONG** (verified review + rating denormalized, D57–D59) | 3 |
 | **9** ✅ | NICE | Google OAuth + Admin dashboard chart — **XONG** (GIS token verify + Recharts, D60–D61) | 3 |
-| **10** | All | Polish (UI, edge cases) + deploy + README | 3 |
+| **10** ✅ | All | Polish UI/UX (2026-06-30 → 07-02, xem DEV-LOG) + deploy Neon/Render/Vercel — **XONG** (root README cố ý không commit — xem .gitignore) | 3 |
+| **11** ✅ | NICE | Chatbot tư vấn sách DeepSeek (`modules/chat` + `features/chat`, 2 lớp rate-limit) — **XONG** | — |
 
 **Tổng:**
 - **Tối thiểu** (CORE + polish): ~**25 ngày** với 5-7 ngày buffer

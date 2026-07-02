@@ -5,7 +5,8 @@ import { randomInt } from 'node:crypto';
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const SUFFIX_LENGTH = 5;
 
-// Mã đơn hiển thị cho khách: "BK-YYYYMMDD-XXXXX" (BK = BookStore, khớp ví dụ trong schema).
+// Mã đơn hiển thị cho khách: "BK-YYYYMMDD-XXXXX" (BK = BooK — giữ nguyên tiền tố sau khi
+// rebrand "Ánh Sách" để mã đơn cũ/mới nhất quán, khớp ví dụ trong schema).
 // - Phần ngày giúp đọc/sắp xếp đơn theo mắt thường.
 // - Phần XXXXX random chặn người ngoài đoán mã đơn của người khác.
 // - randomInt của crypto: ngẫu nhiên an toàn, không thiên lệch như Math.random()%n.

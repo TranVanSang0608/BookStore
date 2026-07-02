@@ -21,6 +21,9 @@ export interface OrderEmailData {
   order_code: string;
   subtotal: number;
   shipping_fee: number;
+  /** Tiền giảm từ voucher — 0 là không dùng mã (không render dòng giảm giá) */
+  discount_amount: number;
+  voucher_code: string | null;
   total: number;
   note: string | null;
   payment_method: 'cod' | 'vnpay';
@@ -68,10 +71,10 @@ export function buildOrderConfirmationEmail(data: OrderEmailData): { subject: st
   const isVnpay = data.payment_method === 'vnpay';
   const heading = isVnpay ? 'Đã nhận đơn hàng — chờ thanh toán' : 'Đặt hàng thành công 🎉';
   const introHtml = isVnpay
-    ? `<p>Cảm ơn bạn đã đặt hàng tại BookStore. Chúng tôi đã ghi nhận đơn
+    ? `<p>Cảm ơn bạn đã đặt hàng tại Ánh Sách. Chúng tôi đã ghi nhận đơn
          <strong>${escapeHtml(data.order_code)}</strong>. Vui lòng <strong>hoàn tất thanh toán qua VNPay</strong>
          để đơn được xử lý — đơn chưa thanh toán sẽ tự hủy sau 24 giờ.</p>`
-    : `<p>Cảm ơn bạn đã đặt hàng tại BookStore. Chúng tôi đã nhận đơn
+    : `<p>Cảm ơn bạn đã đặt hàng tại Ánh Sách. Chúng tôi đã nhận đơn
          <strong>${escapeHtml(data.order_code)}</strong> và đang xử lý.</p>`;
 
   const bodyHtml = `
@@ -85,8 +88,14 @@ export function buildOrderConfirmationEmail(data: OrderEmailData): { subject: st
           <td style="text-align:right;">${formatVnd(data.subtotal)}</td></tr>
       <tr><td style="padding:2px 0;color:#6b7280;">Phí vận chuyển</td>
           <td style="text-align:right;">${shipLabel}</td></tr>
+      ${
+        data.discount_amount > 0
+          ? `<tr><td style="padding:2px 0;color:#6b7280;">Giảm giá${data.voucher_code ? ` (mã ${escapeHtml(data.voucher_code)})` : ''}</td>
+          <td style="text-align:right;color:#3e5a39;">−${formatVnd(data.discount_amount)}</td></tr>`
+          : ''
+      }
       <tr><td style="padding:6px 0;font-weight:700;font-size:16px;">Tổng cộng</td>
-          <td style="text-align:right;font-weight:700;font-size:16px;color:#4f46e5;">${formatVnd(data.total)}</td></tr>
+          <td style="text-align:right;font-weight:700;font-size:16px;color:#3e5a39;">${formatVnd(data.total)}</td></tr>
     </table>
 
     <p style="margin-top:16px;"><strong>Giao tới:</strong><br/>
@@ -104,8 +113,8 @@ export function buildOrderConfirmationEmail(data: OrderEmailData): { subject: st
   });
 
   const subject = isVnpay
-    ? `[BookStore] Đơn hàng ${data.order_code} — vui lòng hoàn tất thanh toán`
-    : `[BookStore] Xác nhận đơn hàng ${data.order_code}`;
+    ? `[Ánh Sách] Đơn hàng ${data.order_code} — vui lòng hoàn tất thanh toán`
+    : `[Ánh Sách] Xác nhận đơn hàng ${data.order_code}`;
   return { subject, html };
 }
 
@@ -128,6 +137,8 @@ export async function sendOrderConfirmationEmail(orderCode: string): Promise<voi
       order_code: order.order_code,
       subtotal: order.subtotal,
       shipping_fee: order.shipping_fee,
+      discount_amount: order.discount_amount,
+      voucher_code: order.voucher_code,
       total: order.total,
       note: order.note,
       payment_method: order.payments[0]?.gateway ?? 'cod',

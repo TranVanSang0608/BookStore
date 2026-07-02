@@ -14,7 +14,7 @@ export async function getHealth(_req: Request, res: Response) {
 
   res.json({
     success: true,
-    message: 'BookStore API đang chạy',
+    message: 'Ánh Sách API đang chạy',
     database,
     timestamp: new Date().toISOString(),
   });

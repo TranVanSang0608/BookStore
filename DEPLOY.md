@@ -3,6 +3,10 @@
 > Stack: **DB** trên Neon (Postgres) · **Backend** Express trên Render · **Frontend** React trên Vercel.
 > Tất cả đều có gói **free**. Các file cấu hình đã có sẵn trong repo: `render.yaml`,
 > `frontend/vercel.json`, `.nvmrc`. File này hướng dẫn các bước bấm tay + danh sách biến môi trường.
+>
+> **URL production hiện tại (đã deploy):** FE `https://book-store-pi-virid.vercel.app` ·
+> BE `https://bookstore-api-d5t9.onrender.com` (API base `/api`) ·
+> VNPay return `https://bookstore-api-d5t9.onrender.com/api/payments/vnpay/return`.
 
 ## Sơ đồ
 
@@ -117,7 +121,7 @@ Mở URL Vercel và thử lần lượt:
 | `VNP_URL` | | `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html` (set sẵn) |
 | `VNP_RETURN_URL` | ✅ | `https://<backend>.onrender.com/api/payments/vnpay/return` |
 | `RESEND_API_KEY` | ✅ | Từ Resend (`re_...`) |
-| `MAIL_FROM` | ✅ | vd `BookStore <onboarding@resend.dev>` |
+| `MAIL_FROM` | ✅ | vd `Ánh Sách <onboarding@resend.dev>` |
 | `GOOGLE_CLIENT_ID` | ✅ | Client ID Google (giống FE) |
 | `DEEPSEEK_API_KEY` | ✅ | Từ DeepSeek (`sk-...`) |
 | `DEEPSEEK_MODEL` | | `deepseek-v4-flash` (set sẵn) |

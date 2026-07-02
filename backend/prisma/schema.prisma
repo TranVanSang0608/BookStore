@@ -1,7 +1,10 @@
 // =============================================================
-// Schema CORE — 12 bảng (theo THIET-KE.md mục 5)
-// 5 bảng NICE (Wishlist, Voucher, VoucherUsage, Review, RefreshToken)
-// sẽ thêm bằng migration mới khi qua checkpoint Phase 5.
+// Schema đầy đủ — 21 bảng (theo THIET-KE.md mục 5):
+// CORE 14 (init 12 + Province/Ward) + EmailToken (Phase 6)
+// + Voucher/VoucherUsage (Phase 7) + Wishlist/Review (Phase 8)
+// + SiteSetting + ShippingConfig (D62).
+// (RefreshToken trong thiết kế gốc KHÔNG hiện thực — thay bằng
+// User.token_version để revoke JWT, xem D53.)
 //
 // Quy ước: field snake_case (trùng tên cột DB, khỏi cần @map),
 // tiền tệ dùng Int vì VND không có số lẻ (30000 = 30.000đ).
