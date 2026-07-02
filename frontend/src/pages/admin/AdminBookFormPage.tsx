@@ -126,7 +126,9 @@ function BookForm({ editId, initial }: { editId: number | null; initial: FormSta
       queryClient.invalidateQueries({ queryKey: ['admin-book', editId] })
       queryClient.invalidateQueries({ queryKey: ['books'] })
       queryClient.invalidateQueries({ queryKey: ['book'] })
-      navigate('/admin/books')
+      navigate('/admin/books', {
+        state: { toast: editId === null ? 'Tạo sách thành công' : 'Lưu thành công' },
+      })
     },
     onError: (err) => setError(getApiErrorMessage(err)),
   })

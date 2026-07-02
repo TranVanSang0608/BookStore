@@ -1,17 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchAdminBooks, setBookActiveApi } from '../../api/books'
 import CoverImage from '../../features/catalog/CoverImage'
 import Pagination from '../../features/catalog/Pagination'
 import { formatPrice } from '../../lib/format'
 
+type AdminBooksRouteState = {
+  toast?: string
+}
+
 export default function AdminBooksPage() {
   // Bảng admin dùng state cục bộ (không cần URL share được như trang public)
+  const location = useLocation()
   const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [search, setSearch] = useState('') // giá trị đã bấm "Tìm" — q là giá trị đang gõ
   const [page, setPage] = useState(1)
+  const [toast, setToast] = useState(
+    () => (location.state as AdminBooksRouteState | null)?.toast ?? '',
+  )
   const queryClient = useQueryClient()
 
   const { data, isPending } = useQuery({
@@ -35,9 +43,27 @@ export default function AdminBooksPage() {
     setPage(1)
   }
 
+  useEffect(() => {
+    if (!toast) return
+
+    navigate('/admin/books', { replace: true, state: null })
+
+    const timer = window.setTimeout(() => setToast(''), 3000)
+    return () => window.clearTimeout(timer)
+  }, [navigate, toast])
+
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body space-y-4">
+    <>
+      {toast && (
+        <div className="toast toast-top toast-end z-50">
+          <div className="alert alert-success shadow-lg text-sm">
+            <span>{toast}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="card bg-base-100 border border-base-300">
+        <div className="card-body space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="card-title font-serif">Quản lý sách {data && `(${data.total})`}</h1>
           <Link to="/admin/books/new" className="btn btn-primary btn-sm">
@@ -128,7 +154,8 @@ export default function AdminBooksPage() {
         )}
 
         {data && <Pagination page={data.page} totalPages={data.totalPages} onChange={setPage} />}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

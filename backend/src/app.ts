@@ -36,13 +36,22 @@ const app = express();
 // internet (không có reverse proxy), phải đặt TRUST_PROXY=0 — nếu không attacker tự gửi
 // X-Forwarded-For giả để né rate-limit theo IP.
 const trustProxy = process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? '1' : '0');
+const configuredOrigins = (process.env.FRONTEND_ORIGIN ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins =
+  process.env.NODE_ENV === 'production'
+    ? configuredOrigins
+    : [...new Set([...configuredOrigins, 'http://localhost:5173', 'http://127.0.0.1:5173'])];
+
 if (trustProxy !== '0' && trustProxy !== 'false') {
   const hops = Number(trustProxy);
   app.set('trust proxy', Number.isNaN(hops) ? trustProxy : hops); // số → số hop; chuỗi khác → để Express tự hiểu
 }
 
 app.use(helmet()); // bộ security headers (CSP, X-Frame-Options...)
-app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173' })); // chỉ cho phép FE gọi API
+app.use(cors({ origin: allowedOrigins.length > 0 ? allowedOrigins : 'http://localhost:5173' })); // chỉ cho phép FE gọi API
 app.use(express.json()); // parse JSON body
 
 // Chống brute-force password: mỗi IP tối đa 20 request vào /api/auth/* trong 15 phút

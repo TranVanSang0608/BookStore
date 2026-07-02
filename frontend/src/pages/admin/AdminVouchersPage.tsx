@@ -27,6 +27,8 @@ const EMPTY = {
   is_active: true,
 }
 
+const VOUCHER_STATUS_CHECKED_AT = Date.now()
+
 export default function AdminVouchersPage() {
   const [editing, setEditing] = useState<Voucher | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -69,7 +71,7 @@ export default function AdminVouchersPage() {
   })
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
-    setForm((prev) => ({ ...prev, [k]: v }))
+    setForm((prev) => (Object.is(prev[k], v) ? prev : { ...prev, [k]: v }))
   }
 
   function openCreate() {
@@ -121,6 +123,13 @@ export default function AdminVouchersPage() {
       : formatPrice(v.discount_value)
   }
 
+  function voucherStatus(v: Voucher) {
+    const expired = v.expire_at ? new Date(v.expire_at).getTime() < VOUCHER_STATUS_CHECKED_AT : false
+    if (expired) return { label: 'Hết hạn', badge: 'badge-error', disabled: true }
+    if (v.is_active) return { label: 'Bật', badge: 'badge-success', disabled: false }
+    return { label: 'Tắt', badge: 'badge-ghost', disabled: false }
+  }
+
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body space-y-4">
@@ -150,7 +159,9 @@ export default function AdminVouchersPage() {
               </tr>
             </thead>
             <tbody>
-              {vouchers?.map((v) => (
+              {vouchers?.map((v) => {
+                const status = voucherStatus(v)
+                return (
                 // Cả dòng bấm được để mở modal sửa; các nút thao tác chặn nổi bọt
                 <tr key={v.id} className="hover cursor-pointer" onClick={() => openEdit(v)}>
                   <td className="font-mono font-medium">{v.code}</td>
@@ -163,14 +174,14 @@ export default function AdminVouchersPage() {
                   <td>{v.expire_at ? v.expire_at.slice(0, 10) : '—'}</td>
                   <td>
                     <button
-                      className={`badge whitespace-nowrap ${v.is_active ? 'badge-success' : 'badge-ghost'}`}
-                      disabled={toggleMutation.isPending}
+                      className={`badge whitespace-nowrap ${status.badge}`}
+                      disabled={toggleMutation.isPending || status.disabled}
                       onClick={(e) => {
                         e.stopPropagation()
                         toggleMutation.mutate(v.id)
                       }}
                     >
-                      {v.is_active ? 'Bật' : 'Tắt'}
+                      {status.label}
                     </button>
                   </td>
                   <td className="whitespace-nowrap">
@@ -195,7 +206,8 @@ export default function AdminVouchersPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -217,6 +229,7 @@ export default function AdminVouchersPage() {
               required
               autoFocus
               value={form.code}
+              onInput={(e) => setField('code', e.currentTarget.value)}
               onChange={(e) => setField('code', e.target.value)}
             />
           </label>
@@ -226,6 +239,7 @@ export default function AdminVouchersPage() {
             <select
               className="select select-bordered w-full"
               value={form.discount_type}
+              onInput={(e) => setField('discount_type', e.currentTarget.value as DiscountType)}
               onChange={(e) => setField('discount_type', e.target.value as DiscountType)}
             >
               <option value="percentage">Phần trăm</option>
@@ -240,6 +254,7 @@ export default function AdminVouchersPage() {
               type="number"
               required
               value={form.discount_value}
+              onInput={(e) => setField('discount_value', e.currentTarget.value)}
               onChange={(e) => setField('discount_value', e.target.value)}
             />
           </label>
@@ -250,6 +265,7 @@ export default function AdminVouchersPage() {
               className="input input-bordered w-full"
               type="number"
               value={form.min_order}
+              onInput={(e) => setField('min_order', e.currentTarget.value)}
               onChange={(e) => setField('min_order', e.target.value)}
             />
           </label>
@@ -261,6 +277,7 @@ export default function AdminVouchersPage() {
               type="number"
               placeholder="Không giới hạn"
               value={form.max_discount}
+              onInput={(e) => setField('max_discount', e.currentTarget.value)}
               onChange={(e) => setField('max_discount', e.target.value)}
             />
           </label>
@@ -271,6 +288,7 @@ export default function AdminVouchersPage() {
               className="input input-bordered w-full"
               type="date"
               value={form.expire_at}
+              onInput={(e) => setField('expire_at', e.currentTarget.value)}
               onChange={(e) => setField('expire_at', e.target.value)}
             />
           </label>
@@ -282,6 +300,7 @@ export default function AdminVouchersPage() {
               type="number"
               placeholder="∞"
               value={form.usage_limit}
+              onInput={(e) => setField('usage_limit', e.currentTarget.value)}
               onChange={(e) => setField('usage_limit', e.target.value)}
             />
           </label>
@@ -292,6 +311,7 @@ export default function AdminVouchersPage() {
               className="input input-bordered w-full"
               type="number"
               value={form.per_user_limit}
+              onInput={(e) => setField('per_user_limit', e.currentTarget.value)}
               onChange={(e) => setField('per_user_limit', e.target.value)}
             />
           </label>
@@ -301,6 +321,7 @@ export default function AdminVouchersPage() {
               type="checkbox"
               className="checkbox checkbox-sm"
               checked={form.is_active}
+              onInput={(e) => setField('is_active', e.currentTarget.checked)}
               onChange={(e) => setField('is_active', e.target.checked)}
             />
             <span className="label-text">Đang bật</span>
