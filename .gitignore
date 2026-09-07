@@ -23,16 +23,18 @@ Thumbs.db
 .vscode/
 .idea/
 
-# File hướng dẫn/checklist local do agent tạo (không commit)
+# File hướng dẫn/cấu hình local cho AI agent (không commit)
 /CLAUDE.md
-/README.md
+/AGENTS.md
 /ROADMAP.md
 /TODO.md
 /.nvmrc
+.claude/
 
 # Báo cáo / tài liệu nộp + artifact local (không thuộc mã nguồn)
 *.docx
 BAO-CAO-*.md
+DEV-LOG.md
 KE-HOACH-*.md
 CAI-THIEN-*.md
 NGHIEM-THU.md

@@ -361,7 +361,7 @@ frontend/
 | **7** ✅ | NICE | Voucher + VoucherUsage — **XONG** (% + cố định, per-user limit, D54–D56) | 2 |
 | **8** ✅ | NICE | Wishlist + Review + Recommend — **XONG** (verified review + rating denormalized, D57–D59) | 3 |
 | **9** ✅ | NICE | Google OAuth + Admin dashboard chart — **XONG** (GIS token verify + Recharts, D60–D61) | 3 |
-| **10** ✅ | All | Polish UI/UX (2026-06-30 → 07-02, xem DEV-LOG) + deploy Neon/Render/Vercel — **XONG** (root README cố ý không commit — xem .gitignore) | 3 |
+| **10** ✅ | All | Polish UI/UX (2026-06-30 → 07-02, xem DEV-LOG) + deploy Neon/Render/Vercel — **XONG** (README.md ở root) | 3 |
 | **11** ✅ | NICE | Chatbot tư vấn sách DeepSeek (`modules/chat` + `features/chat`, 2 lớp rate-limit) — **XONG** | — |
 
 **Tổng:**
